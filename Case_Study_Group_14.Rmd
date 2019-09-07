@@ -1,0 +1,2870 @@
+---
+title: "Case Study"
+author: "Group-14"
+runtime: shiny
+output: html_document
+---
+
+```{r Load Required Packages, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+#Kindly go to "Edit>Folding>Collpase all" to fold all the code chunks, to make the code better readable.
+
+if (!require(data.table)) {
+  install.packages("data.table")
+  require(data.table)
+}
+if (!require(readr)) {
+  install.packages("readr")
+  require(readr)
+}
+if (!require(readxl)) {
+  install.packages("readxl")
+  require(readxl)
+}
+if (!require(dplyr)) {
+  install.packages("dplyr")
+  require(dplyr)
+}
+if (!require(tidyr)) {
+  install.packages("tidyr")
+  require(tidyr)
+}
+if (!require(purrr)) {
+  install.packages("purrr")
+  require(purrr)
+}
+if (!require(stringr)) {
+  install.packages("stringr")
+  require(stringr)
+}
+if (!require(rebus)) {
+  install.packages("rebus")
+  require(rebus)
+}
+if (!require(tidyverse)) {
+  install.packages("tidyverse")
+  require(tidyverse)
+}
+if (!require(ggplot2)) {
+  install.packages("ggplot2")
+  require(ggplot2)
+}
+if (!require(ggQC)) {
+  install.packages("ggQC")
+  require(ggQC)
+}
+if (!require(shiny)) {
+  install.packages("shiny")
+  require(shiny)
+}
+if (!require(plotly)) {
+  install.packages("plotly")
+  require(shiny)
+}
+```
+```{r Load Required Packages ONLY FOR SHINY APP, message=FALSE, warning=FALSE, include=FALSE}
+
+#Kindly go to "Edit>Folding>Collpase all" to fold all the code chunks, to make the code better readable.
+
+if (!require(shiny)) {
+  install.packages("shiny")
+  require(shiny)
+}
+if (!require(plotly)) {
+  install.packages("plotly")
+  require(shiny)
+}
+```
+
+```{r Importing Cleaning and Manipulating Data, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+
+#Kindly go to "Edit>Folding>Collpase all" to fold all the code chunks, to make the code better readable.
+
+
+#data is read in and checked to clean all IDS are renamed to be able to match by column names
+renameIDs <- c("ID_Motor"= "ID_Komponente", "ID_Schaltung"= "ID_Komponente", "ID_Karosserie"= "ID_Komponente", "ID_Sitze"= "ID_Komponente", "Produktionsdatum_Origin_01011970" = "Produktionsdatum")
+
+Komponente26 <- fread("Data/Komponente/Komponente_K1BE1.csv")
+Komponente26$origin <- as.Date(Komponente26$origin, format = "%d-%m-%Y")
+Komponente26 <- transform(Komponente26, Produktionsdatum = Komponente26$Produktionsdatum_Origin_01011970 + Komponente26$origin) #Production Date is found by adding these two columns
+Komponente26$Produktionsdatum_Origin_01011970<- NULL
+Komponente26$origin<- NULL
+Komponente26$V1 <- NULL
+Komponente26$X1 <- NULL
+Komponente26$Fehlerhaft_Fahrleistung <- NULL
+Komponente26 <- plyr::rename(Komponente26, renameIDs)
+
+Komponente27 <- fread("Data/Komponente/Komponente_K1BE2.csv")
+Komponente27$Fehlerhaft_Datum <- as.Date(Komponente27$Fehlerhaft_Datum, format = "%Y-%m-%d")
+Komponente27$origin <- as.Date(Komponente27$origin, format = "%d-%m-%Y")
+Komponente27 <- transform(Komponente27, Produktionsdatum = Komponente27$Produktionsdatum_Origin_01011970 + Komponente27$origin)
+Komponente27$Produktionsdatum_Origin_01011970<- NULL
+Komponente27$origin<- NULL
+Komponente27$V1 <- NULL
+Komponente27$X1 <- NULL
+Komponente27$Fehlerhaft_Fahrleistung <- NULL
+Komponente27 <- plyr::rename(Komponente27, renameIDs)
+
+
+Komponente28 <- fread("Data/Komponente/Komponente_K1DI1.csv")
+Komponente28$Produktionsdatum.x  <- as.Date(Komponente28$Produktionsdatum.x, format = "%Y-%m-%d")
+Komponente28$Produktionsdatum.y  <- as.Date(Komponente28$Produktionsdatum.y, format = "%Y-%m-%d")
+Komponente28$Produktionsdatum  <- as.Date(Komponente28$Produktionsdatum, format = "%Y-%m-%d")
+Komponente28$V1<- NULL
+Komponente28$X1<- NULL
+x <-  filter(Komponente28, !is.na(`Produktionsdatum.y` ))
+x <- select(x, ID_Motor.y, `Produktionsdatum.y`, `Herstellernummer.y`, `Werksnummer.y`, `Fehlerhaft.y`, `Fehlerhaft_Datum.y`)
+x2 <-  filter(Komponente28, !is.na(`Produktionsdatum.x` ))
+x2 <- select(x2, ID_Motor.x,`Produktionsdatum.x`, `Herstellernummer.x`, `Werksnummer.x`, `Fehlerhaft.x`, `Fehlerhaft_Datum.x`)
+x3 <-  filter(Komponente28, !is.na(`Produktionsdatum` ))
+x3 <- select(x3, ID_Motor,`Produktionsdatum`, `Herstellernummer`, `Werksnummer`, `Fehlerhaft`, `Fehlerhaft_Datum`)
+rename.x <- c("ID_Motor.x" = "ID_Motor","ID_Sitze.x" = "ID_Sitze", "ID_Schaltung.x" = "ID_Schaltung", "Produktionsdatum.x" = "Produktionsdatum", "Herstellernummer.x"= "Herstellernummer", "Werksnummer.x" = "Werksnummer", "Fehlerhaft.x" = "Fehlerhaft", "Fehlerhaft_Datum.x" = "Fehlerhaft_Datum", "ID_Karosserie.x"= "ID_Karosserie")
+rename.y <- c("ID_Motor.y" = "ID_Motor","ID_Sitze.y" = "ID_Sitze", "ID_Schaltung.y" = "ID_Schaltung", "Produktionsdatum.y" = "Produktionsdatum", "Herstellernummer.y"= "Herstellernummer", "Werksnummer.y" = "Werksnummer", "Fehlerhaft.y" = "Fehlerhaft", "Fehlerhaft_Datum.y" = "Fehlerhaft_Datum", "ID_Karosserie.y"= "ID_Karosserie")
+x <- plyr::rename(x, rename.y)
+x2 <- plyr::rename(x2, rename.x)
+Komponente28 <- bind_rows(x,x2,x3)
+Komponente28 <- plyr::rename(Komponente28, renameIDs)
+
+
+Komponente29 <- read_file("Data/Komponente/Komponente_K1DI2.txt")
+Komponente29<-str_split(Komponente29,pattern="\\\"[0-9]+\"\\\\[0-9]+\\\\\\\"")
+Komponente29 <- data.frame(Komponente29)
+Komponente29 <- separate(Komponente29, col=1, sep = "\\\\", into = c("ID_Motor","Herstellernummer","Werksnummer","Fehlerhaft","Fehlerhaft_Datum","Fehlerhaft_Fahrleistung","Produktionsdatum_Origin_01011970","origin"))
+Komponente29 <- Komponente29[-1,]
+Komponente29$Produktionsdatum_Origin_01011970 <- as.Date(as.POSIXct(origin = "1970-01-01", as.numeric((Komponente29$Produktionsdatum_Origin_01011970))*86400))
+Komponente29 <- select(Komponente29, "ID_Motor","Herstellernummer","Werksnummer","Fehlerhaft","Fehlerhaft_Datum","Fehlerhaft_Fahrleistung","Produktionsdatum_Origin_01011970")
+Komponente29$Fehlerhaft_Fahrleistung <- NULL
+Komponente29$ID_Sitze <- str_remove_all(Komponente29$ID_Motor,"\"")
+Komponente29 <- plyr::rename(Komponente29, renameIDs)
+Komponente29$ID_Komponente <- str_remove_all(Komponente29$ID_Komponente,"\"")
+Komponente29$Werksnummer <- str_remove_all(Komponente29$Werksnummer,"\"")
+Komponente29$Werksnummer <- as.integer(Komponente29$Werksnummer)
+Komponente29$Fehlerhaft <- as.integer(Komponente29$Fehlerhaft)
+#same problem and approach as with Komponente28
+Komponente30 <-read_file("Data/Komponente/Komponente_K2LE1.txt")
+Komponente30<-str_split(Komponente30, pattern="_")
+Komponente30<-data.frame(Komponente30)
+Komponente30<-separate(Komponente30, col = 1, sep = "II", into = c("X1", "X2","ID_Sitze.x","Produktionsdatum.x","Herstellernummer.x","Werksnummer.x","Fehlerhaft.x","Fehlerhaft_Datum.x","Fehlerhaft_Fahrleistung.x", "ID_Sitze.y","Produktionsdatum.y","Herstellernummer.y","Werksnummer.y","Fehlerhaft.y","Fehlerhaft_Datum.y", "Fehlerhaft_Fahrleistung.y"))
+#next step filter for empty rows and rejoin
+Komponente30 <- Komponente30[-1,]
+Komponente30$Produktionsdatum.x  <- as.Date(Komponente30$Produktionsdatum.x, format = "%Y-%m-%d")
+Komponente30$Produktionsdatum.y  <- as.Date(Komponente30$Produktionsdatum.y, format = "%Y-%m-%d")
+head(Komponente30)
+Komponente30$X1 <- NULL
+Komponente30$X2 <- NULL
+#filtering and splitting because some data is saved as .x and some as .y
+x <-  filter(Komponente30, !is.na(`Produktionsdatum.y` ))
+x <- select(x, ID_Sitze.y, `Produktionsdatum.y`, `Herstellernummer.y`, `Werksnummer.y`, `Fehlerhaft.y`, `Fehlerhaft_Datum.y`)
+x2 <-  filter(Komponente30, !is.na(`Produktionsdatum.x` ))
+x2 <- select(x2, `ID_Sitze.x`, `Produktionsdatum.x`, `Herstellernummer.x`, `Werksnummer.x`, `Fehlerhaft.x`, `Fehlerhaft_Datum.x`)
+#rename to be able to use bind rows to be able to bind the komponent data all together
+x <- plyr::rename(x, rename.y)
+x2 <- plyr::rename(x2, rename.x)
+Komponente30 <- bind_rows(x,x2)
+Komponente30 <- plyr::rename(Komponente30, renameIDs)
+Komponente30$ID_Komponente <- str_remove_all(Komponente30$ID_Komponente,"\"")
+Komponente30$Werksnummer <- as.integer(Komponente30$Werksnummer)
+Komponente30$Fehlerhaft <- as.integer(Komponente30$Fehlerhaft)
+
+
+Komponente31 <- read_file("Data/Komponente/Komponente_K2LE2.txt")
+Komponente31<-str_split(Komponente31,pattern="\r")
+Komponente31 <- data.frame(Komponente31)
+Komponente31 <- separate(Komponente31, col = 1, sep = "\\\\", into = c("X1","X11","ID_Sitze","Herstellernummer","Werksnummer","Fehlerhaft","Fehlerhaft_Datum", "Fehlerhaft_Fahrleistung", "Produktionsdatum_Origin_01011970", "origin"))
+Komponente31 <- Komponente31[-1,]
+Komponente31$X1 <- NULL
+Komponente31$X11 <- NULL
+Komponente31$origin <- NULL
+Komponente31$Produktionsdatum_Origin_01011970 <- as.Date(as.POSIXct(origin = "1970-01-01", as.numeric((Komponente31$Produktionsdatum_Origin_01011970))*86400))
+Komponente31$ID_Sitze <- str_remove_all(Komponente31$ID_Sitze,"\"") #To remove all Quotes from the Column
+Komponente31$Herstellernummer <- str_remove_all(Komponente31$Herstellernummer,"\"") #To remove all Quotes from the Column
+Komponente31$Werksnummer <- str_remove_all(Komponente31$Werksnummer,"\"") #To remove all Quotes from the Column
+Komponente31 <- plyr::rename(Komponente31, renameIDs)
+Komponente31$Fehlerhaft_Fahrleistung <- NULL
+Komponente31$Werksnummer <- as.integer(Komponente31$Werksnummer)
+Komponente31$Fehlerhaft <- as.integer(Komponente31$Fehlerhaft)
+
+
+Komponente32 <- fread("Data/Komponente/Komponente_K2ST1.txt")
+Komponente32$Produktionsdatum <- as.Date(Komponente32$Produktionsdatum)
+Komponente32$V1 <- NULL
+Komponente32$X1 <- NULL
+Komponente32$Fehlerhaft_Fahrleistung <- NULL
+Komponente32 <- plyr::rename(Komponente32, renameIDs)
+
+
+Komponente33 <- fread("Data/Komponente/Komponente_K2ST2.csv")
+Komponente33$V1 <- NULL
+Komponente33$X1 <- NULL
+Komponente33$Produktionsdatum_Origin_01011970 <- as.Date(as.POSIXct(origin = "1970-01-01", as.numeric((Komponente33$Produktionsdatum_Origin_01011970))*86400))
+Komponente33$origin <- NULL
+Komponente33$Fehlerhaft_Fahrleistung <- NULL
+Komponente33 <- plyr::rename(Komponente33, renameIDs)
+
+
+Komponente34 <- fread("Data/Komponente/Komponente_K3AG1.csv")
+#file is spilt in 3 different columns and respective NAS. Procedure from Komponente 28 is adapted
+x <-  filter(Komponente34, !is.na(`Produktionsdatum.y` ))
+x <- select(x, ID_Schaltung.y, `Produktionsdatum.y`, `Herstellernummer.y`, `Werksnummer.y`, `Fehlerhaft.y`, `Fehlerhaft_Datum.y`)
+x2 <-  filter(Komponente34, !is.na(`Produktionsdatum.x` ))
+x2 <- select(x2, ID_Schaltung.x,`Produktionsdatum.x`, `Herstellernummer.x`, `Werksnummer.x`, `Fehlerhaft.x`, `Fehlerhaft_Datum.x`)
+x3 <-  filter(Komponente34, !is.na(`Produktionsdatum` ))
+x3 <- select(x3, ID_Schaltung,`Produktionsdatum`, `Herstellernummer`, `Werksnummer`, `Fehlerhaft`, `Fehlerhaft_Datum`)
+x <- plyr::rename(x, rename.y)
+x2 <- plyr::rename(x2, rename.x)
+Komponente34 <- bind_rows(x,x2,x3)
+Komponente34$Produktionsdatum <- as.Date(Komponente34$Produktionsdatum)
+Komponente34 <- plyr::rename(Komponente34, renameIDs)
+
+
+Komponente35 <- read_file("Data/Komponente/Komponente_K3AG2.txt")
+Komponente35 <- str_split(Komponente35,pattern="\\\"[0-9]+\"\\\\[0-9]+\\\\\\\"")
+Komponente35 <- data.frame(Komponente35)
+Komponente35<-separate(Komponente35, col = 1, sep = "\\\\", into = c("ID_Schaltung","Herstellernummer","Werksnummer","Fehlerhaft","Fehlerhaft_Datum","Fehlerhaft_Fahrleistung","Produktionsdatum_Origin_01011970","origin"))
+Komponente35$Produktionsdatum_Origin_01011970  <- as.Date(as.POSIXct(origin = "1970-01-01", as.numeric((Komponente35$Produktionsdatum_Origin_01011970))*86400))
+Komponente35$origin <- NULL
+Komponente35 <- plyr::rename(Komponente35, renameIDs)
+Komponente35$Fehlerhaft_Fahrleistung <- NULL
+Komponente35 <- Komponente35[-1,]
+Komponente35$ID_Komponente <- str_remove_all(Komponente35$ID_Komponente,"\"")
+Komponente35$Werksnummer <- str_remove_all(Komponente35$Werksnummer,"\"")
+Komponente35$Werksnummer <- as.integer(Komponente35$Werksnummer)
+Komponente35$Fehlerhaft <- as.integer(Komponente35$Fehlerhaft)
+
+
+Komponente36 <- fread("Data/Komponente/Komponente_K3SG1.csv")
+Komponente36$V1<- NULL
+Komponente36$X1<- NULL
+Komponente36$Fehlerhaft_Datum.x <- as.Date(Komponente36$Fehlerhaft_Datum.x, format = "%Y-%m-%d")
+Komponente36$Fehlerhaft_Datum.y <- as.Date(Komponente36$Fehlerhaft_Datum.y, format = "%Y-%m-%d")
+#same problem as with Komonente 28 but only split in two, therefore same procedure is applied
+x <-  filter(Komponente36, !is.na(`Produktionsdatum.y` ))
+x <- select(x, ID_Schaltung.y, `Produktionsdatum.y`, `Herstellernummer.y`, `Werksnummer.y`, `Fehlerhaft.y`, `Fehlerhaft_Datum.y`)
+x2 <-  filter(Komponente36, !is.na(`Produktionsdatum.x` ))
+x2 <- select(x2, ID_Schaltung.x,`Produktionsdatum.x`, `Herstellernummer.x`, `Werksnummer.x`, `Fehlerhaft.x`, `Fehlerhaft_Datum.x`)
+x <- plyr::rename(x, rename.y)
+x2 <- plyr::rename(x2, rename.x)
+Komponente36 <- bind_rows(x,x2)
+Komponente36$Produktionsdatum <- as.Date(Komponente36$Produktionsdatum)
+Komponente36 <- plyr::rename(Komponente36, renameIDs)
+
+
+Komponente37 <- fread("Data/Komponente/Komponente_K3SG2.csv")
+Komponente37$V1<- NULL
+Komponente37$X1<- NULL
+Komponente37$origin <- as.Date(Komponente37$origin, format = "%d-%m-%Y")
+Komponente37 <- transform(Komponente37, Produktionsdatum = Komponente37$Produktionsdatum_Origin_01011970 + Komponente37$origin)
+Komponente37$Produktionsdatum_Origin_01011970<- NULL
+Komponente37$origin<- NULL
+head(Komponente37)
+Komponente37 <- plyr::rename(Komponente37, renameIDs)
+Komponente37$Fehlerhaft_Fahrleistung <- NULL
+
+
+Komponente38 <- fread("Data/Komponente/Komponente_K4.csv")
+Komponente38$V1<- NULL
+Komponente38$X1<- NULL
+x <-  filter(Komponente38, !is.na(`Produktionsdatum.y` ))
+x <- select(x, ID_Karosserie.y, `Produktionsdatum.y`, `Herstellernummer.y`, `Werksnummer.y`, `Fehlerhaft.y`, `Fehlerhaft_Datum.y`)
+x2 <-  filter(Komponente38, !is.na(`Produktionsdatum.x` ))
+x2 <- select(x2, ID_Karosserie.x,`Produktionsdatum.x`, `Herstellernummer.x`, `Werksnummer.x`, `Fehlerhaft.x`, `Fehlerhaft_Datum.x`)
+x <- plyr::rename(x, rename.y)
+x2 <- plyr::rename(x2, rename.x)
+Komponente38 <- bind_rows(x,x2)
+Komponente38$Fehlerhaft_Fahrleistung <- NULL
+Komponente38$Produktionsdatum <- as.Date(Komponente38$Produktionsdatum)
+Komponente38 <- plyr::rename(Komponente38, renameIDs)
+
+
+Komponente39 <- fread("Data/Komponente/Komponente_K5.csv")
+x <-  filter(Komponente39, !is.na(`Produktionsdatum.y` ))
+x <- select(x, ID_Karosserie.y, `Produktionsdatum.y`, `Herstellernummer.y`, `Werksnummer.y`, `Fehlerhaft.y`, `Fehlerhaft_Datum.y`)
+x2 <-  filter(Komponente39, !is.na(`Produktionsdatum.x` ))
+x2 <- select(x2, ID_Karosserie.x,`Produktionsdatum.x`, `Herstellernummer.x`, `Werksnummer.x`, `Fehlerhaft.x`, `Fehlerhaft_Datum.x`)
+x <- plyr::rename(x, rename.y)
+x2 <- plyr::rename(x2, rename.x)
+Komponente39 <- bind_rows(x,x2)
+Komponente39$Produktionsdatum <- as.Date(Komponente39$Produktionsdatum)
+Komponente39 <- plyr::rename(Komponente39, renameIDs)
+
+
+Komponente40 <- fread("Data/Komponente/Komponente_K6.csv")
+Komponente40$X1 <- NULL
+Komponente40$V1 <- NULL
+Komponente40$origin <- as.Date(Komponente40$origin, format = "%d-%m-%Y")
+Komponente40 <- transform(Komponente40, Produktionsdatum = Komponente40$Produktionsdatum_Origin_01011970 + Komponente40$origin)
+Komponente40$Produktionsdatum_Origin_01011970<- NULL
+Komponente40$origin <- NULL
+Komponente40$Fehlerhaft_Fahrleistung <- NULL
+Komponente40 <- plyr::rename(Komponente40, renameIDs)
+
+
+Komponente41 <- fread("Data/Komponente/Komponente_K7.txt")
+Komponente41$origin <- as.Date(Komponente41$origin, format = "%d-%m-%Y")
+Komponente41 <- transform(Komponente41, Produktionsdatum = Komponente41$Produktionsdatum_Origin_01011970 + Komponente41$origin)
+Komponente41$Produktionsdatum_Origin_01011970<- NULL
+Komponente41$origin<- NULL
+Komponente41$X1 <- NULL
+Komponente41$V1 <- NULL
+Komponente41$Fehlerhaft_Fahrleistung <- NULL
+Komponente41 <- plyr::rename(Komponente41, renameIDs)
+
+
+#bind all Komponentstogether
+Komponente41$Fehlerhaft_Datum <- NULL
+Komponente40$Fehlerhaft_Datum <- NULL
+Komponente39$Fehlerhaft_Datum <- NULL 
+Komponente38$Fehlerhaft_Datum <- NULL
+Komponente37$Fehlerhaft_Datum <- NULL
+Komponente36$Fehlerhaft_Datum <- NULL 
+Komponente35$Fehlerhaft_Datum <- NULL 
+Komponente34$Fehlerhaft_Datum <- NULL
+Komponente33$Fehlerhaft_Datum <- NULL
+Komponente32$Fehlerhaft_Datum <- NULL
+Komponente31$Fehlerhaft_Datum <- NULL
+Komponente30$Fehlerhaft_Datum <- NULL
+Komponente29$Fehlerhaft_Datum <- NULL
+Komponente28$Fehlerhaft_Datum <- NULL
+Komponente27$Fehlerhaft_Datum <- NULL
+Komponente26$Fehlerhaft_Datum <- NULL
+Komponente41$Herstellernummer <- NULL
+Komponente40$Herstellernummer <- NULL
+Komponente39$Herstellernummer <- NULL 
+Komponente38$Herstellernummer <- NULL
+Komponente37$Herstellernummer <- NULL
+Komponente36$Herstellernummer <- NULL 
+Komponente35$Herstellernummer <- NULL 
+Komponente34$Herstellernummer <- NULL
+Komponente33$Herstellernummer <- NULL
+Komponente32$Herstellernummer <- NULL
+Komponente31$Herstellernummer <- NULL
+Komponente30$Herstellernummer <- NULL
+Komponente29$Herstellernummer <- NULL
+Komponente28$Herstellernummer <- NULL
+Komponente27$Herstellernummer <- NULL
+Komponente26$Herstellernummer <- NULL
+Komponente28 <- Komponente28[,c(1,3,4,2)]
+Komponente29 <- Komponente29[,c(5,2,3,4)]
+Komponente30 <- Komponente30[,c(1,3,4,2)]
+Komponente32 <- Komponente32[,c(1,3,4,2)]
+Komponente34 <- Komponente34[,c(1,3,4,2)]
+Komponente36 <- Komponente36[,c(1,3,4,2)]
+Komponente38<- Komponente38[,c(1,3,4,2)]
+Komponente39 <- Komponente39[,c(1,3,4,2)]
+Komponents_all <- bind_rows(Komponente41, Komponente40, Komponente39, Komponente38, Komponente37, Komponente36, Komponente35, Komponente34, Komponente33, Komponente32, Komponente31, Komponente30, Komponente29, Komponente28, Komponente27, Komponente26)
+Komponents_all <- na.omit(Komponents_all)
+
+#Extract only the Years
+rm(list = ls(pattern="Komponente")) #remove unnecessary variables
+rm(list = ls(pattern="x"))
+rm(list = ls(pattern="rename"))
+
+#change Component Names to a Simpler Fromat necessary for the Final Plots
+Komponents_all[str_detect(Komponents_all$ID_Komponente,"^K6")]$ID_Komponente <- "K6"
+Komponents_all[str_detect(Komponents_all$ID_Komponente,"^K7")]$ID_Komponente <- "K7"
+Komponents_all[str_detect(Komponents_all$ID_Komponente,"^K5")]$ID_Komponente <- "K5"
+Komponents_all[str_detect(Komponents_all$ID_Komponente,"^K4")]$ID_Komponente <- "K4"
+Komponents_all[str_detect(Komponents_all$ID_Komponente,"^K3SG2-")]$ID_Komponente <- "K3SG2"
+Komponents_all[str_detect(Komponents_all$ID_Komponente,"^K3SG1-")]$ID_Komponente <- "K3SG1"
+Komponents_all[str_detect(Komponents_all$ID_Komponente,"^K3AG2-")]$ID_Komponente <- "K3AG2"
+Komponents_all[str_detect(Komponents_all$ID_Komponente,"^K3AG1-")]$ID_Komponente <- "K3AG1"
+Komponents_all[str_detect(Komponents_all$ID_Komponente,"^K2ST2-")]$ID_Komponente <- "K2ST2"
+Komponents_all[str_detect(Komponents_all$ID_Komponente,"^K2ST1")]$ID_Komponente <- "K2ST1"
+Komponents_all[str_detect(Komponents_all$ID_Komponente,"^K2LE2-")]$ID_Komponente <- "K2LE2"
+Komponents_all[str_detect(Komponents_all$ID_Komponente,"^K2LE1-")]$ID_Komponente <- "K2LE1"
+Komponents_all[str_detect(Komponents_all$ID_Komponente,"^K1DI2-")]$ID_Komponente <- "K1DI2"
+Komponents_all[str_detect(Komponents_all$ID_Komponente,"^K1DI1-")]$ID_Komponente <- "K1DI1"
+Komponents_all[str_detect(Komponents_all$ID_Komponente,"^K1BE2-")]$ID_Komponente <- "K1BE2"
+Komponents_all[str_detect(Komponents_all$ID_Komponente,"^K1BE1-")]$ID_Komponente <- "K1BE1"
+
+
+Komponents_all_Month<-Komponents_all
+Komponents_all_Month$Produktionsdatum <- format(as.Date(Komponents_all_Month$Produktionsdatum, format="%Y-%m-%d"),"%Y-%m")
+
+Komponents_all$Produktionsdatum <- format(as.Date(Komponents_all$Produktionsdatum, format="%Y-%m-%d"),"%Y")
+
+#Summarizing Data
+
+Y2008 <- filter(Komponents_all,Produktionsdatum == "2008") %>% group_by(ID_Komponente,Werksnummer)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008 <- Y2008[order(Y2008$Defect,decreasing = TRUE),]
+
+Y2009 <- filter(Komponents_all,Produktionsdatum == "2009") %>% group_by(ID_Komponente,Werksnummer)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2009 <- Y2009[order(Y2009$Defect,decreasing = TRUE),]
+
+Y2010 <- filter(Komponents_all,Produktionsdatum == "2010") %>% group_by(ID_Komponente,Werksnummer)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2010 <- Y2010[order(Y2010$Defect,decreasing = TRUE),]
+
+Y2011 <- filter(Komponents_all,Produktionsdatum == "2011") %>% group_by(ID_Komponente,Werksnummer)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2011 <- Y2011[order(Y2011$Defect,decreasing = TRUE),]
+
+Y2012 <- filter(Komponents_all,Produktionsdatum == "2012") %>% group_by(ID_Komponente,Werksnummer)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2012 <- Y2012[order(Y2012$Defect,decreasing = TRUE),]
+
+Y2013 <- filter(Komponents_all,Produktionsdatum == "2013") %>% group_by(ID_Komponente,Werksnummer)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2013 <- Y2013[order(Y2013$Defect,decreasing = TRUE),]
+
+Y2014 <- filter(Komponents_all,Produktionsdatum == "2014") %>% group_by(ID_Komponente,Werksnummer)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2014 <- Y2014[order(Y2014$Defect,decreasing = TRUE),]
+
+Y2015 <- filter(Komponents_all,Produktionsdatum == "2015") %>% group_by(ID_Komponente,Werksnummer)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2015 <- Y2015[order(Y2015$Defect,decreasing = TRUE),]
+
+Y2016 <- filter(Komponents_all,Produktionsdatum == "2016") %>% group_by(ID_Komponente,Werksnummer)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2016 <- Y2016[order(Y2016$Defect,decreasing = TRUE),]
+
+#2008
+
+Y2008_K4 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2008")] %>% filter(ID_Komponente == "K4")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008_K4$Werksnummer <- factor(Y2008_K4$Werksnummer)
+
+Y2008_K2ST1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2008")] %>% filter(ID_Komponente == "K2ST1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008_K2ST1$Werksnummer <- factor(Y2008_K2ST1$Werksnummer)
+
+Y2008_K1BE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2008")] %>% filter(ID_Komponente == "K1BE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008_K1BE1$Werksnummer <- factor(Y2008_K1BE1$Werksnummer)
+
+Y2008_K3SG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2008")] %>% filter(ID_Komponente == "K3SG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008_K3SG1$Werksnummer <- factor(Y2008_K3SG1$Werksnummer)
+
+Y2008_K2ST2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2008")] %>% filter(ID_Komponente == "K2ST2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008_K2ST2$Werksnummer <- factor(Y2008_K2ST2$Werksnummer)
+
+Y2008_K1BE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2008")] %>% filter(ID_Komponente == "K1BE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008_K1BE2$Werksnummer <- factor(Y2008_K1BE2$Werksnummer)
+
+Y2008_K1DI1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2008")] %>% filter(ID_Komponente == "K1DI1") %>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008_K1DI1$Werksnummer <- factor(Y2008_K1DI1$Werksnummer)
+
+Y2008_K6 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2008")] %>% filter(ID_Komponente == "K6")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008_K6$Werksnummer <- factor(Y2008_K6$Werksnummer)
+
+Y2008_K2LE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2008")] %>% filter(ID_Komponente == "K2LE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008_K2LE1$Werksnummer <- factor(Y2008_K2LE1$Werksnummer)
+
+Y2008_K5 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2008")] %>% filter(ID_Komponente == "K5")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008_K5$Werksnummer <- factor(Y2008_K5$Werksnummer)
+
+Y2008_K2LE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2008")] %>% filter(ID_Komponente == "K2LE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008_K2LE2$Werksnummer <- factor(Y2008_K2LE2$Werksnummer)
+
+Y2008_K7 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2008")] %>% filter(ID_Komponente == "K7")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008_K7$Werksnummer <- factor(Y2008_K7$Werksnummer)
+
+Y2008_K3SG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2008")] %>% filter(ID_Komponente == "K3SG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008_K3SG2$Werksnummer <- factor(Y2008_K3SG2$Werksnummer)
+
+Y2008_K3AG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2008")] %>% filter(ID_Komponente == "K3AG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008_K3AG1$Werksnummer <- factor(Y2008_K3AG1$Werksnummer)
+
+Y2008_K1DI2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2008")] %>% filter(ID_Komponente == "K1DI2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008_K1DI2$Werksnummer <- factor(Y2008_K1DI2$Werksnummer)
+
+Y2008_K3AG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2008")] %>% filter(ID_Komponente == "K3AG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2008_K3AG2$Werksnummer <- factor(Y2008_K3AG2$Werksnummer)
+
+
+#2009
+
+Y2009_K4 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2009")] %>% filter(ID_Komponente == "K4")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2009_K4$Werksnummer <- factor(Y2009_K4$Werksnummer)
+
+Y2009_K2ST1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2009")] %>% filter(ID_Komponente == "K2ST1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2009_K2ST1$Werksnummer <- factor(Y2009_K2ST1$Werksnummer)
+
+Y2009_K1BE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2009")] %>% filter(ID_Komponente == "K1BE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2009_K1BE1$Werksnummer <- factor(Y2009_K1BE1$Werksnummer)
+
+Y2009_K3SG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2009")] %>% filter(ID_Komponente == "K3SG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2009_K3SG1$Werksnummer <- factor(Y2009_K3SG1$Werksnummer)
+
+Y2009_K2ST2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2009")] %>% filter(ID_Komponente == "K2ST2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2009_K2ST2$Werksnummer <- factor(Y2009_K2ST2$Werksnummer)
+
+Y2009_K1BE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2009")] %>% filter(ID_Komponente == "K1BE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2009_K1BE2$Werksnummer <- factor(Y2009_K1BE2$Werksnummer)
+
+Y2009_K1DI1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2009")] %>% filter(ID_Komponente == "K1DI1") %>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2009_K1DI1$Werksnummer <- factor(Y2009_K1DI1$Werksnummer)
+
+Y2009_K6 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2009")] %>% filter(ID_Komponente == "K6")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2009_K6$Werksnummer <- factor(Y2009_K6$Werksnummer)
+
+Y2009_K2LE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2009")] %>% filter(ID_Komponente == "K2LE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2009_K2LE1$Werksnummer <- factor(Y2009_K2LE1$Werksnummer)
+
+Y2009_K5 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2009")] %>% filter(ID_Komponente == "K5")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2009_K5$Werksnummer <- factor(Y2009_K5$Werksnummer)
+
+Y2009_K2LE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2009")] %>% filter(ID_Komponente == "K2LE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2009_K2LE2$Werksnummer <- factor(Y2009_K2LE2$Werksnummer)
+
+Y2009_K7 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2009")] %>% filter(ID_Komponente == "K7")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2009_K7$Werksnummer <- factor(Y2009_K7$Werksnummer)
+
+Y2009_K3SG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2009")] %>% filter(ID_Komponente == "K3SG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2009_K3SG2$Werksnummer <- factor(Y2009_K3SG2$Werksnummer)
+
+Y2009_K3AG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2009")] %>% filter(ID_Komponente == "K3AG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+
+Y2009_K3AG1$Werksnummer <- factor(Y2009_K3AG1$Werksnummer)
+
+Y2009_K1DI2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2009")] %>% filter(ID_Komponente == "K1DI2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2009_K1DI2$Werksnummer <- factor(Y2009_K1DI2$Werksnummer)
+Y2009_K3AG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2009")] %>% filter(ID_Komponente == "K3AG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2009_K3AG2$Werksnummer <- factor(Y2009_K3AG2$Werksnummer)
+#2010
+Y2010_K4 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2010")] %>% filter(ID_Komponente == "K4")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2010_K4$Werksnummer <- factor(Y2010_K4$Werksnummer)
+Y2010_K2ST1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2010")] %>% filter(ID_Komponente == "K2ST1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2010_K2ST1$Werksnummer <- factor(Y2010_K2ST1$Werksnummer)
+Y2010_K1BE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2010")] %>% filter(ID_Komponente == "K1BE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2010_K1BE1$Werksnummer <- factor(Y2010_K1BE1$Werksnummer)
+Y2010_K3SG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2010")] %>% filter(ID_Komponente == "K3SG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2010_K3SG1$Werksnummer <- factor(Y2010_K3SG1$Werksnummer)
+Y2010_K2ST2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2010")] %>% filter(ID_Komponente == "K2ST2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2010_K2ST2$Werksnummer <- factor(Y2010_K2ST2$Werksnummer)
+Y2010_K1BE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2010")] %>% filter(ID_Komponente == "K1BE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2010_K1BE2$Werksnummer <- factor(Y2010_K1BE2$Werksnummer)
+Y2010_K1DI1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2010")] %>% filter(ID_Komponente == "K1DI1") %>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2010_K1DI1$Werksnummer <- factor(Y2010_K1DI1$Werksnummer)
+Y2010_K6 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2010")] %>% filter(ID_Komponente == "K6")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2010_K6$Werksnummer <- factor(Y2010_K6$Werksnummer)
+Y2010_K2LE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2010")] %>% filter(ID_Komponente == "K2LE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2010_K2LE1$Werksnummer <- factor(Y2010_K2LE1$Werksnummer)
+Y2010_K5 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2010")] %>% filter(ID_Komponente == "K5")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2010_K5$Werksnummer <- factor(Y2010_K5$Werksnummer)
+Y2010_K2LE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2010")] %>% filter(ID_Komponente == "K2LE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2010_K2LE2$Werksnummer <- factor(Y2010_K2LE2$Werksnummer)
+Y2010_K7 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2010")] %>% filter(ID_Komponente == "K7")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2010_K7$Werksnummer <- factor(Y2010_K7$Werksnummer)
+Y2010_K3SG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2010")] %>% filter(ID_Komponente == "K3SG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2010_K3SG2$Werksnummer <- factor(Y2010_K3SG2$Werksnummer)
+Y2010_K3AG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2010")] %>% filter(ID_Komponente == "K3AG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2010_K3AG1$Werksnummer <- factor(Y2010_K3AG1$Werksnummer)
+Y2010_K1DI2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2010")] %>% filter(ID_Komponente == "K1DI2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2010_K1DI2$Werksnummer <- factor(Y2010_K1DI2$Werksnummer)
+Y2010_K3AG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2010")] %>% filter(ID_Komponente == "K3AG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2010_K3AG2$Werksnummer <- factor(Y2010_K3AG2$Werksnummer)
+#2011
+Y2011_K4 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2011")] %>% filter(ID_Komponente == "K4")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2011_K4$Werksnummer <- factor(Y2011_K4$Werksnummer)
+Y2011_K2ST1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2011")] %>% filter(ID_Komponente == "K2ST1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2011_K2ST1$Werksnummer <- factor(Y2011_K2ST1$Werksnummer)
+Y2011_K1BE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2011")] %>% filter(ID_Komponente == "K1BE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2011_K1BE1$Werksnummer <- factor(Y2011_K1BE1$Werksnummer)
+Y2011_K3SG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2011")] %>% filter(ID_Komponente == "K3SG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2011_K3SG1$Werksnummer <- factor(Y2011_K3SG1$Werksnummer)
+Y2011_K2ST2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2011")] %>% filter(ID_Komponente == "K2ST2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2011_K2ST2$Werksnummer <- factor(Y2011_K2ST2$Werksnummer)
+Y2011_K1BE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2011")] %>% filter(ID_Komponente == "K1BE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2011_K1BE2$Werksnummer <- factor(Y2011_K1BE2$Werksnummer)
+Y2011_K1DI1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2011")] %>% filter(ID_Komponente == "K1DI1") %>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2011_K1DI1$Werksnummer <- factor(Y2011_K1DI1$Werksnummer)
+Y2011_K6 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2011")] %>% filter(ID_Komponente == "K6")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2011_K6$Werksnummer <- factor(Y2011_K6$Werksnummer)
+Y2011_K2LE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2011")] %>% filter(ID_Komponente == "K2LE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2011_K2LE1$Werksnummer <- factor(Y2011_K2LE1$Werksnummer)
+Y2011_K5 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2011")] %>% filter(ID_Komponente == "K5")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2011_K5$Werksnummer <- factor(Y2011_K5$Werksnummer)
+Y2011_K2LE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2011")] %>% filter(ID_Komponente == "K2LE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2011_K2LE2$Werksnummer <- factor(Y2011_K2LE2$Werksnummer)
+Y2011_K7 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2011")] %>% filter(ID_Komponente == "K7")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2011_K7$Werksnummer <- factor(Y2011_K7$Werksnummer)
+Y2011_K3SG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2011")] %>% filter(ID_Komponente == "K3SG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2011_K3SG2$Werksnummer <- factor(Y2011_K3SG2$Werksnummer)
+Y2011_K3AG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2011")] %>% filter(ID_Komponente == "K3AG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2011_K3AG1$Werksnummer <- factor(Y2011_K3AG1$Werksnummer)
+Y2011_K1DI2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2011")] %>% filter(ID_Komponente == "K1DI2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2011_K1DI2$Werksnummer <- factor(Y2011_K1DI2$Werksnummer)
+Y2011_K3AG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2011")] %>% filter(ID_Komponente == "K3AG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2011_K3AG2$Werksnummer <- factor(Y2011_K3AG2$Werksnummer)
+#2012
+Y2012_K4 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2012")] %>% filter(ID_Komponente == "K4")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2012_K4$Werksnummer <- factor(Y2012_K4$Werksnummer)
+Y2012_K2ST1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2012")] %>% filter(ID_Komponente == "K2ST1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2012_K2ST1$Werksnummer <- factor(Y2012_K2ST1$Werksnummer)
+Y2012_K1BE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2012")] %>% filter(ID_Komponente == "K1BE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2012_K1BE1$Werksnummer <- factor(Y2012_K1BE1$Werksnummer)
+Y2012_K3SG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2012")] %>% filter(ID_Komponente == "K3SG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2012_K3SG1$Werksnummer <- factor(Y2012_K3SG1$Werksnummer)
+Y2012_K2ST2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2012")] %>% filter(ID_Komponente == "K2ST2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2012_K2ST2$Werksnummer <- factor(Y2012_K2ST2$Werksnummer)
+Y2012_K1BE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2012")] %>% filter(ID_Komponente == "K1BE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2012_K1BE2$Werksnummer <- factor(Y2012_K1BE2$Werksnummer)
+Y2012_K1DI1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2012")] %>% filter(ID_Komponente == "K1DI1") %>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2012_K1DI1$Werksnummer <- factor(Y2012_K1DI1$Werksnummer)
+Y2012_K6 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2012")] %>% filter(ID_Komponente == "K6")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2012_K6$Werksnummer <- factor(Y2012_K6$Werksnummer)
+Y2012_K2LE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2012")] %>% filter(ID_Komponente == "K2LE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2012_K2LE1$Werksnummer <- factor(Y2012_K2LE1$Werksnummer)
+Y2012_K5 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2012")] %>% filter(ID_Komponente == "K5")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2012_K5$Werksnummer <- factor(Y2012_K5$Werksnummer)
+Y2012_K2LE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2012")] %>% filter(ID_Komponente == "K2LE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2012_K2LE2$Werksnummer <- factor(Y2012_K2LE2$Werksnummer)
+Y2012_K7 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2012")] %>% filter(ID_Komponente == "K7")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2012_K7$Werksnummer <- factor(Y2012_K7$Werksnummer)
+Y2012_K3SG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2012")] %>% filter(ID_Komponente == "K3SG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2012_K3SG2$Werksnummer <- factor(Y2012_K3SG2$Werksnummer)
+Y2012_K3AG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2012")] %>% filter(ID_Komponente == "K3AG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2012_K3AG1$Werksnummer <- factor(Y2012_K3AG1$Werksnummer)
+Y2012_K1DI2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2012")] %>% filter(ID_Komponente == "K1DI2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2012_K1DI2$Werksnummer <- factor(Y2012_K1DI2$Werksnummer)
+Y2012_K3AG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2012")] %>% filter(ID_Komponente == "K3AG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2012_K3AG2$Werksnummer <- factor(Y2012_K3AG2$Werksnummer)
+#2013
+Y2013_K4 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2013")] %>% filter(ID_Komponente == "K4")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2013_K4$Werksnummer <- factor(Y2013_K4$Werksnummer)
+Y2013_K2ST1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2013")] %>% filter(ID_Komponente == "K2ST1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2013_K2ST1$Werksnummer <- factor(Y2013_K2ST1$Werksnummer)
+Y2013_K1BE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2013")] %>% filter(ID_Komponente == "K1BE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2013_K1BE1$Werksnummer <- factor(Y2013_K1BE1$Werksnummer)
+Y2013_K3SG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2013")] %>% filter(ID_Komponente == "K3SG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2013_K3SG1$Werksnummer <- factor(Y2013_K3SG1$Werksnummer)
+Y2013_K2ST2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2013")] %>% filter(ID_Komponente == "K2ST2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2013_K2ST2$Werksnummer <- factor(Y2013_K2ST2$Werksnummer)
+Y2013_K1BE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2013")] %>% filter(ID_Komponente == "K1BE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2013_K1BE2$Werksnummer <- factor(Y2013_K1BE2$Werksnummer)
+Y2013_K1DI1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2013")] %>% filter(ID_Komponente == "K1DI1") %>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2013_K1DI1$Werksnummer <- factor(Y2013_K1DI1$Werksnummer)
+Y2013_K6 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2013")] %>% filter(ID_Komponente == "K6")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2013_K6$Werksnummer <- factor(Y2013_K6$Werksnummer)
+Y2013_K2LE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2013")] %>% filter(ID_Komponente == "K2LE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2013_K2LE1$Werksnummer <- factor(Y2013_K2LE1$Werksnummer)
+Y2013_K5 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2013")] %>% filter(ID_Komponente == "K5")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2013_K5$Werksnummer <- factor(Y2013_K5$Werksnummer)
+Y2013_K2LE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2013")] %>% filter(ID_Komponente == "K2LE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2013_K2LE2$Werksnummer <- factor(Y2013_K2LE2$Werksnummer)
+Y2013_K7 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2013")] %>% filter(ID_Komponente == "K7")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2013_K7$Werksnummer <- factor(Y2013_K7$Werksnummer)
+Y2013_K3SG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2013")] %>% filter(ID_Komponente == "K3SG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2013_K3SG2$Werksnummer <- factor(Y2013_K3SG2$Werksnummer)
+Y2013_K3AG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2013")] %>% filter(ID_Komponente == "K3AG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2013_K3AG1$Werksnummer <- factor(Y2013_K3AG1$Werksnummer)
+Y2013_K1DI2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2013")] %>% filter(ID_Komponente == "K1DI2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2013_K1DI2$Werksnummer <- factor(Y2013_K1DI2$Werksnummer)
+Y2013_K3AG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2013")] %>% filter(ID_Komponente == "K3AG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2013_K3AG2$Werksnummer <- factor(Y2013_K3AG2$Werksnummer)
+#2014
+Y2014_K4 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2014")] %>% filter(ID_Komponente == "K4")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2014_K4$Werksnummer <- factor(Y2014_K4$Werksnummer)
+Y2014_K2ST1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2014")] %>% filter(ID_Komponente == "K2ST1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2014_K2ST1$Werksnummer <- factor(Y2014_K2ST1$Werksnummer)
+Y2014_K1BE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2014")] %>% filter(ID_Komponente == "K1BE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2014_K1BE1$Werksnummer <- factor(Y2014_K1BE1$Werksnummer)
+Y2014_K3SG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2014")] %>% filter(ID_Komponente == "K3SG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2014_K3SG1$Werksnummer <- factor(Y2014_K3SG1$Werksnummer)
+Y2014_K2ST2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2014")] %>% filter(ID_Komponente == "K2ST2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2014_K2ST2$Werksnummer <- factor(Y2014_K2ST2$Werksnummer)
+Y2014_K1BE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2014")] %>% filter(ID_Komponente == "K1BE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2014_K1BE2$Werksnummer <- factor(Y2014_K1BE2$Werksnummer)
+Y2014_K1DI1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2014")] %>% filter(ID_Komponente == "K1DI1") %>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2014_K1DI1$Werksnummer <- factor(Y2014_K1DI1$Werksnummer)
+Y2014_K6 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2014")] %>% filter(ID_Komponente == "K6")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2014_K6$Werksnummer <- factor(Y2014_K6$Werksnummer)
+Y2014_K2LE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2014")] %>% filter(ID_Komponente == "K2LE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2014_K2LE1$Werksnummer <- factor(Y2014_K2LE1$Werksnummer)
+Y2014_K5 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2014")] %>% filter(ID_Komponente == "K5")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2014_K5$Werksnummer <- factor(Y2014_K5$Werksnummer)
+Y2014_K2LE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2014")] %>% filter(ID_Komponente == "K2LE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2014_K2LE2$Werksnummer <- factor(Y2014_K2LE2$Werksnummer)
+Y2014_K7 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2014")] %>% filter(ID_Komponente == "K7")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2014_K7$Werksnummer <- factor(Y2014_K7$Werksnummer)
+Y2014_K3SG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2014")] %>% filter(ID_Komponente == "K3SG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2014_K3SG2$Werksnummer <- factor(Y2014_K3SG2$Werksnummer)
+Y2014_K3AG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2014")] %>% filter(ID_Komponente == "K3AG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2014_K3AG1$Werksnummer <- factor(Y2014_K3AG1$Werksnummer)
+Y2014_K1DI2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2014")] %>% filter(ID_Komponente == "K1DI2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2014_K1DI2$Werksnummer <- factor(Y2014_K1DI2$Werksnummer)
+Y2014_K3AG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2014")] %>% filter(ID_Komponente == "K3AG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2014_K3AG2$Werksnummer <- factor(Y2014_K3AG2$Werksnummer)
+#2015
+Y2015_K4 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2015")] %>% filter(ID_Komponente == "K4")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2015_K4$Werksnummer <- factor(Y2015_K4$Werksnummer)
+Y2015_K2ST1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2015")] %>% filter(ID_Komponente == "K2ST1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2015_K2ST1$Werksnummer <- factor(Y2015_K2ST1$Werksnummer)
+Y2015_K1BE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2015")] %>% filter(ID_Komponente == "K1BE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2015_K1BE1$Werksnummer <- factor(Y2015_K1BE1$Werksnummer)
+Y2015_K3SG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2015")] %>% filter(ID_Komponente == "K3SG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2015_K3SG1$Werksnummer <- factor(Y2015_K3SG1$Werksnummer)
+Y2015_K2ST2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2015")] %>% filter(ID_Komponente == "K2ST2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2015_K2ST2$Werksnummer <- factor(Y2015_K2ST2$Werksnummer)
+Y2015_K1BE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2015")] %>% filter(ID_Komponente == "K1BE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2015_K1BE2$Werksnummer <- factor(Y2015_K1BE2$Werksnummer)
+Y2015_K1DI1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2015")] %>% filter(ID_Komponente == "K1DI1") %>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2015_K1DI1$Werksnummer <- factor(Y2015_K1DI1$Werksnummer)
+Y2015_K6 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2015")] %>% filter(ID_Komponente == "K6")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2015_K6$Werksnummer <- factor(Y2015_K6$Werksnummer)
+Y2015_K2LE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2015")] %>% filter(ID_Komponente == "K2LE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2015_K2LE1$Werksnummer <- factor(Y2015_K2LE1$Werksnummer)
+Y2015_K5 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2015")] %>% filter(ID_Komponente == "K5")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2015_K5$Werksnummer <- factor(Y2015_K5$Werksnummer)
+Y2015_K2LE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2015")] %>% filter(ID_Komponente == "K2LE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2015_K2LE2$Werksnummer <- factor(Y2015_K2LE2$Werksnummer)
+Y2015_K7 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2015")] %>% filter(ID_Komponente == "K7")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2015_K7$Werksnummer <- factor(Y2015_K7$Werksnummer)
+Y2015_K3SG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2015")] %>% filter(ID_Komponente == "K3SG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2015_K3SG2$Werksnummer <- factor(Y2015_K3SG2$Werksnummer)
+Y2015_K3AG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2015")] %>% filter(ID_Komponente == "K3AG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2015_K3AG1$Werksnummer <- factor(Y2015_K3AG1$Werksnummer)
+Y2015_K1DI2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2015")] %>% filter(ID_Komponente == "K1DI2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2015_K1DI2$Werksnummer <- factor(Y2015_K1DI2$Werksnummer)
+Y2015_K3AG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2015")] %>% filter(ID_Komponente == "K3AG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2015_K3AG2$Werksnummer <- factor(Y2015_K3AG2$Werksnummer)
+#2016
+Y2016_K4 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2016")] %>% filter(ID_Komponente == "K4")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2016_K4$Werksnummer <- factor(Y2016_K4$Werksnummer)
+Y2016_K2ST1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2016")] %>% filter(ID_Komponente == "K2ST1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2016_K2ST1$Werksnummer <- factor(Y2016_K2ST1$Werksnummer)
+Y2016_K1BE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2016")] %>% filter(ID_Komponente == "K1BE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2016_K1BE1$Werksnummer <- factor(Y2016_K1BE1$Werksnummer)
+Y2016_K3SG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2016")] %>% filter(ID_Komponente == "K3SG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2016_K3SG1$Werksnummer <- factor(Y2016_K3SG1$Werksnummer)
+Y2016_K2ST2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2016")] %>% filter(ID_Komponente == "K2ST2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2016_K2ST2$Werksnummer <- factor(Y2016_K2ST2$Werksnummer)
+Y2016_K1BE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2016")] %>% filter(ID_Komponente == "K1BE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2016_K1BE2$Werksnummer <- factor(Y2016_K1BE2$Werksnummer)
+Y2016_K1DI1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2016")] %>% filter(ID_Komponente == "K1DI1") %>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2016_K1DI1$Werksnummer <- factor(Y2016_K1DI1$Werksnummer)
+Y2016_K6 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2016")] %>% filter(ID_Komponente == "K6")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2016_K6$Werksnummer <- factor(Y2016_K6$Werksnummer)
+Y2016_K2LE1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2016")] %>% filter(ID_Komponente == "K2LE1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2016_K2LE1$Werksnummer <- factor(Y2016_K2LE1$Werksnummer)
+Y2016_K5 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2016")] %>% filter(ID_Komponente == "K5")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2016_K5$Werksnummer <- factor(Y2016_K5$Werksnummer)
+Y2016_K2LE2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2016")] %>% filter(ID_Komponente == "K2LE2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2016_K2LE2$Werksnummer <- factor(Y2016_K2LE2$Werksnummer)
+Y2016_K7 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2016")] %>% filter(ID_Komponente == "K7")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2016_K7$Werksnummer <- factor(Y2016_K7$Werksnummer)
+Y2016_K3SG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2016")] %>% filter(ID_Komponente == "K3SG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2016_K3SG2$Werksnummer <- factor(Y2016_K3SG2$Werksnummer)
+Y2016_K3AG1 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2016")] %>% filter(ID_Komponente == "K3AG1")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2016_K3AG1$Werksnummer <- factor(Y2016_K3AG1$Werksnummer)
+Y2016_K1DI2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2016")] %>% filter(ID_Komponente == "K1DI2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft))
+Y2016_K1DI2$Werksnummer <- factor(Y2016_K1DI2$Werksnummer)
+Y2016_K3AG2 <- Komponents_all_Month[str_detect(Komponents_all_Month$Produktionsdatum,"^2016")] %>% filter(ID_Komponente == "K3AG2")%>% group_by(Werksnummer,Produktionsdatum)%>% summarise(Defect=sum(Fehlerhaft)) 
+Y2016_K3AG2$Werksnummer <- factor(Y2016_K3AG2$Werksnummer)
+#2008
+Y2008_K4_Cumulative <- Y2008_K4  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2008_K4 <- merge(x = Y2008_K4, y = Y2008_K4_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2008_K4_Cumulative)
+Y2008_K2ST1_Cumulative<- Y2008_K2ST1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2008_K2ST1<- merge(x = Y2008_K2ST1, y = Y2008_K2ST1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2008_K2ST1_Cumulative)
+Y2008_K1BE1_Cumulative<- Y2008_K1BE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2008_K1BE1<- merge(x = Y2008_K1BE1, y = Y2008_K1BE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2008_K1BE1_Cumulative)
+Y2008_K3SG1_Cumulative<- Y2008_K3SG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2008_K3SG1<- merge(x = Y2008_K3SG1, y = Y2008_K3SG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2008_K3SG1_Cumulative)
+Y2008_K2ST2_Cumulative<- Y2008_K2ST2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2008_K2ST2<- merge(x = Y2008_K2ST2, y = Y2008_K2ST2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2008_K2ST2_Cumulative)
+Y2008_K1BE2_Cumulative<- Y2008_K1BE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2008_K1BE2<- merge(x = Y2008_K1BE2, y = Y2008_K1BE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2008_K1BE2_Cumulative)
+Y2008_K1DI1_Cumulative<- Y2008_K1DI1 %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2008_K1DI1<- merge(x = Y2008_K1DI1, y = Y2008_K1DI1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2008_K1DI1_Cumulative)
+Y2008_K6_Cumulative<- Y2008_K6  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2008_K6<- merge(x = Y2008_K6, y = Y2008_K6_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2008_K6_Cumulative)
+Y2008_K2LE1_Cumulative<- Y2008_K2LE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2008_K2LE1<- merge(x = Y2008_K2LE1, y = Y2008_K2LE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2008_K2LE1_Cumulative)
+Y2008_K5_Cumulative<- Y2008_K5  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2008_K5<- merge(x = Y2008_K5, y = Y2008_K5_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2008_K5_Cumulative)
+Y2008_K2LE2_Cumulative<- Y2008_K2LE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2008_K2LE2<- merge(x = Y2008_K2LE2, y = Y2008_K2LE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2008_K2LE2_Cumulative)
+Y2008_K7_Cumulative<- Y2008_K7  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2008_K7<- merge(x = Y2008_K7, y = Y2008_K7_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2008_K7_Cumulative)
+Y2008_K3SG2_Cumulative<- Y2008_K3SG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2008_K3SG2<- merge(x = Y2008_K3SG2, y = Y2008_K3SG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2008_K3SG2_Cumulative)
+Y2008_K3AG1_Cumulative<- Y2008_K3AG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2008_K3AG1<- merge(x = Y2008_K3AG1, y = Y2008_K3AG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2008_K3AG1_Cumulative)
+Y2008_K1DI2_Cumulative<- Y2008_K1DI2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2008_K1DI2<- merge(x = Y2008_K1DI2, y = Y2008_K1DI2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2008_K1DI2_Cumulative)
+Y2008_K3AG2_Cumulative<- Y2008_K3AG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2008_K3AG2 <- merge(x = Y2008_K3AG2, y = Y2008_K3AG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2008_K3AG2_Cumulative)
+#2009
+Y2009_K4_Cumulative <- Y2009_K4  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2009_K4 <- merge(x = Y2009_K4, y = Y2009_K4_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2009_K4_Cumulative)
+Y2009_K2ST1_Cumulative<- Y2009_K2ST1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2009_K2ST1<- merge(x = Y2009_K2ST1, y = Y2009_K2ST1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2009_K2ST1_Cumulative)
+Y2009_K1BE1_Cumulative<- Y2009_K1BE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2009_K1BE1<- merge(x = Y2009_K1BE1, y = Y2009_K1BE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2009_K1BE1_Cumulative)
+Y2009_K3SG1_Cumulative<- Y2009_K3SG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2009_K3SG1<- merge(x = Y2009_K3SG1, y = Y2009_K3SG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2009_K3SG1_Cumulative)
+Y2009_K2ST2_Cumulative<- Y2009_K2ST2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2009_K2ST2<- merge(x = Y2009_K2ST2, y = Y2009_K2ST2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2009_K2ST2_Cumulative)
+Y2009_K1BE2_Cumulative<- Y2009_K1BE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2009_K1BE2<- merge(x = Y2009_K1BE2, y = Y2009_K1BE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2009_K1BE2_Cumulative)
+Y2009_K1DI1_Cumulative<- Y2009_K1DI1 %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2009_K1DI1<- merge(x = Y2009_K1DI1, y = Y2009_K1DI1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2009_K1DI1_Cumulative)
+Y2009_K6_Cumulative<- Y2009_K6  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2009_K6<- merge(x = Y2009_K6, y = Y2009_K6_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2009_K6_Cumulative)
+Y2009_K2LE1_Cumulative<- Y2009_K2LE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2009_K2LE1<- merge(x = Y2009_K2LE1, y = Y2009_K2LE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2009_K2LE1_Cumulative)
+Y2009_K5_Cumulative<- Y2009_K5  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2009_K5<- merge(x = Y2009_K5, y = Y2009_K5_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2009_K5_Cumulative)
+Y2009_K2LE2_Cumulative<- Y2009_K2LE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2009_K2LE2<- merge(x = Y2009_K2LE2, y = Y2009_K2LE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2009_K2LE2_Cumulative)
+Y2009_K7_Cumulative<- Y2009_K7  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2009_K7<- merge(x = Y2009_K7, y = Y2009_K7_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2009_K7_Cumulative)
+Y2009_K3SG2_Cumulative<- Y2009_K3SG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2009_K3SG2<- merge(x = Y2009_K3SG2, y = Y2009_K3SG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2009_K3SG2_Cumulative)
+Y2009_K3AG1_Cumulative<- Y2009_K3AG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2009_K3AG1<- merge(x = Y2009_K3AG1, y = Y2009_K3AG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2009_K3AG1_Cumulative)
+Y2009_K1DI2_Cumulative<- Y2009_K1DI2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2009_K1DI2<- merge(x = Y2009_K1DI2, y = Y2009_K1DI2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2009_K1DI2_Cumulative)
+Y2009_K3AG2_Cumulative<- Y2009_K3AG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2009_K3AG2 <- merge(x = Y2009_K3AG2, y = Y2009_K3AG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2009_K3AG2_Cumulative)
+#2010
+Y2010_K4_Cumulative <- Y2010_K4  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2010_K4 <- merge(x = Y2010_K4, y = Y2010_K4_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2010_K4_Cumulative)
+Y2010_K2ST1_Cumulative<- Y2010_K2ST1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2010_K2ST1<- merge(x = Y2010_K2ST1, y = Y2010_K2ST1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2010_K2ST1_Cumulative)
+Y2010_K1BE1_Cumulative<- Y2010_K1BE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2010_K1BE1<- merge(x = Y2010_K1BE1, y = Y2010_K1BE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2010_K1BE1_Cumulative)
+Y2010_K3SG1_Cumulative<- Y2010_K3SG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2010_K3SG1<- merge(x = Y2010_K3SG1, y = Y2010_K3SG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2010_K3SG1_Cumulative)
+Y2010_K2ST2_Cumulative<- Y2010_K2ST2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2010_K2ST2<- merge(x = Y2010_K2ST2, y = Y2010_K2ST2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2010_K2ST2_Cumulative)
+Y2010_K1BE2_Cumulative<- Y2010_K1BE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2010_K1BE2<- merge(x = Y2010_K1BE2, y = Y2010_K1BE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2010_K1BE2_Cumulative)
+Y2010_K1DI1_Cumulative<- Y2010_K1DI1 %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2010_K1DI1<- merge(x = Y2010_K1DI1, y = Y2010_K1DI1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2010_K1DI1_Cumulative)
+Y2010_K6_Cumulative<- Y2010_K6  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2010_K6<- merge(x = Y2010_K6, y = Y2010_K6_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2010_K6_Cumulative)
+Y2010_K2LE1_Cumulative<- Y2010_K2LE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2010_K2LE1<- merge(x = Y2010_K2LE1, y = Y2010_K2LE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2010_K2LE1_Cumulative)
+Y2010_K5_Cumulative<- Y2010_K5  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2010_K5<- merge(x = Y2010_K5, y = Y2010_K5_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2010_K5_Cumulative)
+Y2010_K2LE2_Cumulative<- Y2010_K2LE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2010_K2LE2<- merge(x = Y2010_K2LE2, y = Y2010_K2LE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2010_K2LE2_Cumulative)
+Y2010_K7_Cumulative<- Y2010_K7  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2010_K7<- merge(x = Y2010_K7, y = Y2010_K7_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2010_K7_Cumulative)
+Y2010_K3SG2_Cumulative<- Y2010_K3SG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2010_K3SG2<- merge(x = Y2010_K3SG2, y = Y2010_K3SG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2010_K3SG2_Cumulative)
+Y2010_K3AG1_Cumulative<- Y2010_K3AG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2010_K3AG1<- merge(x = Y2010_K3AG1, y = Y2010_K3AG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2010_K3AG1_Cumulative)
+Y2010_K1DI2_Cumulative<- Y2010_K1DI2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2010_K1DI2<- merge(x = Y2010_K1DI2, y = Y2010_K1DI2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2010_K1DI2_Cumulative)
+Y2010_K3AG2_Cumulative<- Y2010_K3AG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2010_K3AG2 <- merge(x = Y2010_K3AG2, y = Y2010_K3AG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2010_K3AG2_Cumulative)
+#2011
+Y2011_K4_Cumulative <- Y2011_K4  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2011_K4 <- merge(x = Y2011_K4, y = Y2011_K4_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2011_K4_Cumulative)
+Y2011_K2ST1_Cumulative<- Y2011_K2ST1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2011_K2ST1<- merge(x = Y2011_K2ST1, y = Y2011_K2ST1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2011_K2ST1_Cumulative)
+Y2011_K1BE1_Cumulative<- Y2011_K1BE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2011_K1BE1<- merge(x = Y2011_K1BE1, y = Y2011_K1BE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2011_K1BE1_Cumulative)
+Y2011_K3SG1_Cumulative<- Y2011_K3SG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2011_K3SG1<- merge(x = Y2011_K3SG1, y = Y2011_K3SG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2011_K3SG1_Cumulative)
+Y2011_K2ST2_Cumulative<- Y2011_K2ST2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2011_K2ST2<- merge(x = Y2011_K2ST2, y = Y2011_K2ST2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2011_K2ST2_Cumulative)
+Y2011_K1BE2_Cumulative<- Y2011_K1BE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2011_K1BE2<- merge(x = Y2011_K1BE2, y = Y2011_K1BE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2011_K1BE2_Cumulative)
+Y2011_K1DI1_Cumulative<- Y2011_K1DI1 %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2011_K1DI1<- merge(x = Y2011_K1DI1, y = Y2011_K1DI1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2011_K1DI1_Cumulative)
+Y2011_K6_Cumulative<- Y2011_K6  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2011_K6<- merge(x = Y2011_K6, y = Y2011_K6_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2011_K6_Cumulative)
+Y2011_K2LE1_Cumulative<- Y2011_K2LE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2011_K2LE1<- merge(x = Y2011_K2LE1, y = Y2011_K2LE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2011_K2LE1_Cumulative)
+Y2011_K5_Cumulative<- Y2011_K5  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2011_K5<- merge(x = Y2011_K5, y = Y2011_K5_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2011_K5_Cumulative)
+Y2011_K2LE2_Cumulative<- Y2011_K2LE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2011_K2LE2<- merge(x = Y2011_K2LE2, y = Y2011_K2LE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2011_K2LE2_Cumulative)
+Y2011_K7_Cumulative<- Y2011_K7  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2011_K7<- merge(x = Y2011_K7, y = Y2011_K7_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2011_K7_Cumulative)
+Y2011_K3SG2_Cumulative<- Y2011_K3SG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2011_K3SG2<- merge(x = Y2011_K3SG2, y = Y2011_K3SG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2011_K3SG2_Cumulative)
+Y2011_K3AG1_Cumulative<- Y2011_K3AG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2011_K3AG1<- merge(x = Y2011_K3AG1, y = Y2011_K3AG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2011_K3AG1_Cumulative)
+Y2011_K1DI2_Cumulative<- Y2011_K1DI2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2011_K1DI2<- merge(x = Y2011_K1DI2, y = Y2011_K1DI2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2011_K1DI2_Cumulative)
+Y2011_K3AG2_Cumulative<- Y2011_K3AG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2011_K3AG2 <- merge(x = Y2011_K3AG2, y = Y2011_K3AG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2011_K3AG2_Cumulative)
+#2012
+Y2012_K4_Cumulative <- Y2012_K4  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2012_K4 <- merge(x = Y2012_K4, y = Y2012_K4_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2012_K4_Cumulative)
+Y2012_K2ST1_Cumulative<- Y2012_K2ST1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2012_K2ST1<- merge(x = Y2012_K2ST1, y = Y2012_K2ST1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2012_K2ST1_Cumulative)
+Y2012_K1BE1_Cumulative<- Y2012_K1BE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2012_K1BE1<- merge(x = Y2012_K1BE1, y = Y2012_K1BE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2012_K1BE1_Cumulative)
+Y2012_K3SG1_Cumulative<- Y2012_K3SG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2012_K3SG1<- merge(x = Y2012_K3SG1, y = Y2012_K3SG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2012_K3SG1_Cumulative)
+Y2012_K2ST2_Cumulative<- Y2012_K2ST2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2012_K2ST2<- merge(x = Y2012_K2ST2, y = Y2012_K2ST2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2012_K2ST2_Cumulative)
+Y2012_K1BE2_Cumulative<- Y2012_K1BE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2012_K1BE2<- merge(x = Y2012_K1BE2, y = Y2012_K1BE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2012_K1BE2_Cumulative)
+Y2012_K1DI1_Cumulative<- Y2012_K1DI1 %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2012_K1DI1<- merge(x = Y2012_K1DI1, y = Y2012_K1DI1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2012_K1DI1_Cumulative)
+Y2012_K6_Cumulative<- Y2012_K6  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2012_K6<- merge(x = Y2012_K6, y = Y2012_K6_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2012_K6_Cumulative)
+Y2012_K2LE1_Cumulative<- Y2012_K2LE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2012_K2LE1<- merge(x = Y2012_K2LE1, y = Y2012_K2LE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2012_K2LE1_Cumulative)
+Y2012_K5_Cumulative<- Y2012_K5  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2012_K5<- merge(x = Y2012_K5, y = Y2012_K5_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2012_K5_Cumulative)
+Y2012_K2LE2_Cumulative<- Y2012_K2LE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2012_K2LE2<- merge(x = Y2012_K2LE2, y = Y2012_K2LE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2012_K2LE2_Cumulative)
+Y2012_K7_Cumulative<- Y2012_K7  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2012_K7<- merge(x = Y2012_K7, y = Y2012_K7_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2012_K7_Cumulative)
+Y2012_K3SG2_Cumulative<- Y2012_K3SG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2012_K3SG2<- merge(x = Y2012_K3SG2, y = Y2012_K3SG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2012_K3SG2_Cumulative)
+Y2012_K3AG1_Cumulative<- Y2012_K3AG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2012_K3AG1<- merge(x = Y2012_K3AG1, y = Y2012_K3AG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2012_K3AG1_Cumulative)
+Y2012_K1DI2_Cumulative<- Y2012_K1DI2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2012_K1DI2<- merge(x = Y2012_K1DI2, y = Y2012_K1DI2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2012_K1DI2_Cumulative)
+Y2012_K3AG2_Cumulative<- Y2012_K3AG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2012_K3AG2 <- merge(x = Y2012_K3AG2, y = Y2012_K3AG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2012_K3AG2_Cumulative)
+#2013
+Y2013_K4_Cumulative <- Y2013_K4  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2013_K4 <- merge(x = Y2013_K4, y = Y2013_K4_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2013_K4_Cumulative)
+Y2013_K2ST1_Cumulative<- Y2013_K2ST1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2013_K2ST1<- merge(x = Y2013_K2ST1, y = Y2013_K2ST1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2013_K2ST1_Cumulative)
+Y2013_K1BE1_Cumulative<- Y2013_K1BE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2013_K1BE1<- merge(x = Y2013_K1BE1, y = Y2013_K1BE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2013_K1BE1_Cumulative)
+Y2013_K3SG1_Cumulative<- Y2013_K3SG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2013_K3SG1<- merge(x = Y2013_K3SG1, y = Y2013_K3SG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2013_K3SG1_Cumulative)
+Y2013_K2ST2_Cumulative<- Y2013_K2ST2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2013_K2ST2<- merge(x = Y2013_K2ST2, y = Y2013_K2ST2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2013_K2ST2_Cumulative)
+Y2013_K1BE2_Cumulative<- Y2013_K1BE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2013_K1BE2<- merge(x = Y2013_K1BE2, y = Y2013_K1BE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2013_K1BE2_Cumulative)
+Y2013_K1DI1_Cumulative<- Y2013_K1DI1 %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2013_K1DI1<- merge(x = Y2013_K1DI1, y = Y2013_K1DI1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2013_K1DI1_Cumulative)
+Y2013_K6_Cumulative<- Y2013_K6  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2013_K6<- merge(x = Y2013_K6, y = Y2013_K6_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2013_K6_Cumulative)
+Y2013_K2LE1_Cumulative<- Y2013_K2LE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2013_K2LE1<- merge(x = Y2013_K2LE1, y = Y2013_K2LE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2013_K2LE1_Cumulative)
+Y2013_K5_Cumulative<- Y2013_K5  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2013_K5<- merge(x = Y2013_K5, y = Y2013_K5_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2013_K5_Cumulative)
+Y2013_K2LE2_Cumulative<- Y2013_K2LE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2013_K2LE2<- merge(x = Y2013_K2LE2, y = Y2013_K2LE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2013_K2LE2_Cumulative)
+Y2013_K7_Cumulative<- Y2013_K7  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2013_K7<- merge(x = Y2013_K7, y = Y2013_K7_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2013_K7_Cumulative)
+Y2013_K3SG2_Cumulative<- Y2013_K3SG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2013_K3SG2<- merge(x = Y2013_K3SG2, y = Y2013_K3SG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2013_K3SG2_Cumulative)
+Y2013_K3AG1_Cumulative<- Y2013_K3AG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2013_K3AG1<- merge(x = Y2013_K3AG1, y = Y2013_K3AG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2013_K3AG1_Cumulative)
+Y2013_K1DI2_Cumulative<- Y2013_K1DI2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2013_K1DI2<- merge(x = Y2013_K1DI2, y = Y2013_K1DI2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2013_K1DI2_Cumulative)
+Y2013_K3AG2_Cumulative<- Y2013_K3AG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2013_K3AG2 <- merge(x = Y2013_K3AG2, y = Y2013_K3AG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2013_K3AG2_Cumulative)
+#2014
+Y2014_K4_Cumulative <- Y2014_K4  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2014_K4 <- merge(x = Y2014_K4, y = Y2014_K4_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2014_K4_Cumulative)
+Y2014_K2ST1_Cumulative<- Y2014_K2ST1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2014_K2ST1<- merge(x = Y2014_K2ST1, y = Y2014_K2ST1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2014_K2ST1_Cumulative)
+Y2014_K1BE1_Cumulative<- Y2014_K1BE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2014_K1BE1<- merge(x = Y2014_K1BE1, y = Y2014_K1BE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2014_K1BE1_Cumulative)
+Y2014_K3SG1_Cumulative<- Y2014_K3SG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2014_K3SG1<- merge(x = Y2014_K3SG1, y = Y2014_K3SG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2014_K3SG1_Cumulative)
+Y2014_K2ST2_Cumulative<- Y2014_K2ST2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2014_K2ST2<- merge(x = Y2014_K2ST2, y = Y2014_K2ST2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2014_K2ST2_Cumulative)
+Y2014_K1BE2_Cumulative<- Y2014_K1BE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2014_K1BE2<- merge(x = Y2014_K1BE2, y = Y2014_K1BE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2014_K1BE2_Cumulative)
+Y2014_K1DI1_Cumulative<- Y2014_K1DI1 %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2014_K1DI1<- merge(x = Y2014_K1DI1, y = Y2014_K1DI1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2014_K1DI1_Cumulative)
+Y2014_K6_Cumulative<- Y2014_K6  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2014_K6<- merge(x = Y2014_K6, y = Y2014_K6_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2014_K6_Cumulative)
+Y2014_K2LE1_Cumulative<- Y2014_K2LE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2014_K2LE1<- merge(x = Y2014_K2LE1, y = Y2014_K2LE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2014_K2LE1_Cumulative)
+Y2014_K5_Cumulative<- Y2014_K5  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2014_K5<- merge(x = Y2014_K5, y = Y2014_K5_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2014_K5_Cumulative)
+Y2014_K2LE2_Cumulative<- Y2014_K2LE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2014_K2LE2<- merge(x = Y2014_K2LE2, y = Y2014_K2LE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2014_K2LE2_Cumulative)
+Y2014_K7_Cumulative<- Y2014_K7  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2014_K7<- merge(x = Y2014_K7, y = Y2014_K7_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2014_K7_Cumulative)
+Y2014_K3SG2_Cumulative<- Y2014_K3SG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2014_K3SG2<- merge(x = Y2014_K3SG2, y = Y2014_K3SG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2014_K3SG2_Cumulative)
+Y2014_K3AG1_Cumulative<- Y2014_K3AG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2014_K3AG1<- merge(x = Y2014_K3AG1, y = Y2014_K3AG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2014_K3AG1_Cumulative)
+Y2014_K1DI2_Cumulative<- Y2014_K1DI2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2014_K1DI2<- merge(x = Y2014_K1DI2, y = Y2014_K1DI2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2014_K1DI2_Cumulative)
+Y2014_K3AG2_Cumulative<- Y2014_K3AG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2014_K3AG2 <- merge(x = Y2014_K3AG2, y = Y2014_K3AG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2014_K3AG2_Cumulative)
+#2015
+Y2015_K4_Cumulative <- Y2015_K4  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2015_K4 <- merge(x = Y2015_K4, y = Y2015_K4_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2015_K4_Cumulative)
+Y2015_K2ST1_Cumulative<- Y2015_K2ST1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2015_K2ST1<- merge(x = Y2015_K2ST1, y = Y2015_K2ST1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2015_K2ST1_Cumulative)
+Y2015_K1BE1_Cumulative<- Y2015_K1BE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2015_K1BE1<- merge(x = Y2015_K1BE1, y = Y2015_K1BE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2015_K1BE1_Cumulative)
+Y2015_K3SG1_Cumulative<- Y2015_K3SG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2015_K3SG1<- merge(x = Y2015_K3SG1, y = Y2015_K3SG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2015_K3SG1_Cumulative)
+Y2015_K2ST2_Cumulative<- Y2015_K2ST2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2015_K2ST2<- merge(x = Y2015_K2ST2, y = Y2015_K2ST2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2015_K2ST2_Cumulative)
+Y2015_K1BE2_Cumulative<- Y2015_K1BE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2015_K1BE2<- merge(x = Y2015_K1BE2, y = Y2015_K1BE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2015_K1BE2_Cumulative)
+Y2015_K1DI1_Cumulative<- Y2015_K1DI1 %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2015_K1DI1<- merge(x = Y2015_K1DI1, y = Y2015_K1DI1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2015_K1DI1_Cumulative)
+Y2015_K6_Cumulative<- Y2015_K6  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2015_K6<- merge(x = Y2015_K6, y = Y2015_K6_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2015_K6_Cumulative)
+Y2015_K2LE1_Cumulative<- Y2015_K2LE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2015_K2LE1<- merge(x = Y2015_K2LE1, y = Y2015_K2LE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2015_K2LE1_Cumulative)
+Y2015_K5_Cumulative<- Y2015_K5  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2015_K5<- merge(x = Y2015_K5, y = Y2015_K5_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2015_K5_Cumulative)
+Y2015_K2LE2_Cumulative<- Y2015_K2LE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2015_K2LE2<- merge(x = Y2015_K2LE2, y = Y2015_K2LE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2015_K2LE2_Cumulative)
+Y2015_K7_Cumulative<- Y2015_K7  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2015_K7<- merge(x = Y2015_K7, y = Y2015_K7_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2015_K7_Cumulative)
+Y2015_K3SG2_Cumulative<- Y2015_K3SG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2015_K3SG2<- merge(x = Y2015_K3SG2, y = Y2015_K3SG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2015_K3SG2_Cumulative)
+Y2015_K3AG1_Cumulative<- Y2015_K3AG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2015_K3AG1<- merge(x = Y2015_K3AG1, y = Y2015_K3AG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2015_K3AG1_Cumulative)
+Y2015_K1DI2_Cumulative<- Y2015_K1DI2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2015_K1DI2<- merge(x = Y2015_K1DI2, y = Y2015_K1DI2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2015_K1DI2_Cumulative)
+Y2015_K3AG2_Cumulative<- Y2015_K3AG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2015_K3AG2 <- merge(x = Y2015_K3AG2, y = Y2015_K3AG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2015_K3AG2_Cumulative)
+#2016
+Y2016_K4_Cumulative <- Y2016_K4  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2016_K4 <- merge(x = Y2016_K4, y = Y2016_K4_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2016_K4_Cumulative)
+Y2016_K2ST1_Cumulative<- Y2016_K2ST1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2016_K2ST1<- merge(x = Y2016_K2ST1, y = Y2016_K2ST1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2016_K2ST1_Cumulative)
+Y2016_K1BE1_Cumulative<- Y2016_K1BE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2016_K1BE1<- merge(x = Y2016_K1BE1, y = Y2016_K1BE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2016_K1BE1_Cumulative)
+Y2016_K3SG1_Cumulative<- Y2016_K3SG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2016_K3SG1<- merge(x = Y2016_K3SG1, y = Y2016_K3SG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2016_K3SG1_Cumulative)
+Y2016_K2ST2_Cumulative<- Y2016_K2ST2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2016_K2ST2<- merge(x = Y2016_K2ST2, y = Y2016_K2ST2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2016_K2ST2_Cumulative)
+Y2016_K1BE2_Cumulative<- Y2016_K1BE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2016_K1BE2<- merge(x = Y2016_K1BE2, y = Y2016_K1BE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2016_K1BE2_Cumulative)
+Y2016_K1DI1_Cumulative<- Y2016_K1DI1 %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2016_K1DI1<- merge(x = Y2016_K1DI1, y = Y2016_K1DI1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2016_K1DI1_Cumulative)
+Y2016_K6_Cumulative<- Y2016_K6  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2016_K6<- merge(x = Y2016_K6, y = Y2016_K6_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2016_K6_Cumulative)
+Y2016_K2LE1_Cumulative<- Y2016_K2LE1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2016_K2LE1<- merge(x = Y2016_K2LE1, y = Y2016_K2LE1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2016_K2LE1_Cumulative)
+Y2016_K5_Cumulative<- Y2016_K5  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2016_K5<- merge(x = Y2016_K5, y = Y2016_K5_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2016_K5_Cumulative)
+Y2016_K2LE2_Cumulative<- Y2016_K2LE2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2016_K2LE2<- merge(x = Y2016_K2LE2, y = Y2016_K2LE2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2016_K2LE2_Cumulative)
+Y2016_K7_Cumulative<- Y2016_K7  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2016_K7<- merge(x = Y2016_K7, y = Y2016_K7_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2016_K7_Cumulative)
+Y2016_K3SG2_Cumulative<- Y2016_K3SG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2016_K3SG2<- merge(x = Y2016_K3SG2, y = Y2016_K3SG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2016_K3SG2_Cumulative)
+Y2016_K3AG1_Cumulative<- Y2016_K3AG1  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2016_K3AG1<- merge(x = Y2016_K3AG1, y = Y2016_K3AG1_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2016_K3AG1_Cumulative)
+Y2016_K1DI2_Cumulative<- Y2016_K1DI2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2016_K1DI2<- merge(x = Y2016_K1DI2, y = Y2016_K1DI2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2016_K1DI2_Cumulative)
+Y2016_K3AG2_Cumulative<- Y2016_K3AG2  %>% group_by(Produktionsdatum) %>% summarise(cumulative=sum(Defect))
+Y2016_K3AG2 <- merge(x = Y2016_K3AG2, y = Y2016_K3AG2_Cumulative, by = "Produktionsdatum", all.x = TRUE)
+rm(Y2016_K3AG2_Cumulative)
+rm(Komponents_all)
+rm(Komponents_all_Month)
+```
+
+```{r Loading the Final Data Set, include=FALSE}
+load("Final_Data_Group_14.RData", envir=.GlobalEnv)
+```
+
+```{r Combined Data for the Overall Defect Plot, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+Combined <- bind_rows(Y2008,Y2009,Y2010,Y2011,Y2012,Y2013,Y2014,Y2015,Y2016)
+Combined$ID_Komponente  <- factor(Combined$ID_Komponente)
+Combined$Werksnummer <- factor(Combined$Werksnummer)
+```
+
+```{r Polt for Overall Defects from 2008-2016, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+combinedplot <- ggplot(Combined,aes(x=Werksnummer,y=Defect,fill=ID_Komponente))+ geom_col() + labs(title="        Total Defects from 2008 to 2016 Across all Factories")
+```
+
+```{r Combined Plot, echo=FALSE, message=FALSE, warning=FALSE}
+
+combinedplot
+
+```
+It could be seen from the Overall defect data for the time period from 2008 to 2016 that the Component with ID's "K2ST1" and "K2ST2" had a total of 190867 and 39294 defects respectively, which is 15.9% of the total defects of all the components in the time period. Therefore it would be logical to Conduct inspections in Factory -  <b> "1092" </b> which produces these components.
+
+``` {r Pareto Charts 2008, eval=FALSE, include=FALSE}
+Y2008_1011 <- ggplot(Y2008 %>% filter(Werksnummer==1011),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2008_1011")
+
+Y2008_1021 <- ggplot(Y2008 %>% filter(Werksnummer==1021),aes(x=ID_Komponente,y=Defect)) + stat_pareto()+ labs(title="Y2008_1021")
+
+Y2008_1031 <- ggplot(Y2008 %>% filter(Werksnummer==1031),aes(x=ID_Komponente,y=Defect)) + stat_pareto()+ labs(title="Y2008_1031")
+
+Y2008_1041 <- ggplot(Y2008 %>% filter(Werksnummer==1041),aes(x=ID_Komponente,y=Defect)) + stat_pareto()+ labs(title="Y2008_1041")
+
+Y2008_1051 <- ggplot(Y2008 %>% filter(Werksnummer==1051),aes(x=ID_Komponente,y=Defect)) + stat_pareto()+ labs(title="Y2008_1051")
+
+Y2008_1061 <- ggplot(Y2008 %>% filter(Werksnummer==1061),aes(x=ID_Komponente,y=Defect)) + stat_pareto()+ labs(title="Y2008_1061")
+
+Y2008_1071 <- ggplot(Y2008 %>% filter(Werksnummer==1071),aes(x=ID_Komponente,y=Defect)) + stat_pareto()+ labs(title="Y2008_1071")
+
+Y2008_1072 <- ggplot(Y2008 %>% filter(Werksnummer==1072),aes(x=ID_Komponente,y=Defect)) + stat_pareto()+ labs(title="Y2008_1072")
+
+Y2008_1081 <- ggplot(Y2008 %>% filter(Werksnummer==1081),aes(x=ID_Komponente,y=Defect)) + stat_pareto()+ labs(title="Y2008_1081")
+
+Y2008_1082 <- ggplot(Y2008 %>% filter(Werksnummer==1082),aes(x=ID_Komponente,y=Defect)) + stat_pareto()+ labs(title="Y2008_1082")
+
+Y2008_1091 <- ggplot(Y2008 %>% filter(Werksnummer==1091),aes(x=ID_Komponente,y=Defect)) + stat_pareto()+ labs(title="Y2008_1091")
+
+Y2008_1092 <- ggplot(Y2008 %>% filter(Werksnummer==1092),aes(x=ID_Komponente,y=Defect)) + stat_pareto()+ labs(title="Y2008_1092")
+
+Y2008_1111 <- ggplot(Y2008 %>% filter(Werksnummer==1111),aes(x=ID_Komponente,y=Defect)) + stat_pareto()+ labs(title="Y2008_1111")
+
+Y2008_1121 <- ggplot(Y2008 %>% filter(Werksnummer==1121),aes(x=ID_Komponente,y=Defect)) + stat_pareto()+ labs(title="Y2008_1121")
+
+Y2008_1122 <- ggplot(Y2008 %>% filter(Werksnummer==1122),aes(x=ID_Komponente,y=Defect)) + stat_pareto()+ labs(title="Y2008_1122")
+
+Y2008_1132 <- ggplot(Y2008 %>% filter(Werksnummer==1132),aes(x=ID_Komponente,y=Defect)) + stat_pareto()+ labs(title="Y2008_1132")
+
+Y2008_1142 <- ggplot(Y2008 %>% filter(Werksnummer==1142),aes(x=ID_Komponente,y=Defect)) + stat_pareto()+ labs(title="Y2008_1142")
+
+
+```
+``` {r Pareto Charts 2009, eval=FALSE, include=FALSE}
+Y2009_1011 <- ggplot(Y2009 %>% filter(Werksnummer==1011),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1011")
+
+Y2009_1021 <- ggplot(Y2009 %>% filter(Werksnummer==1021),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1021")
+
+Y2009_1031 <- ggplot(Y2009 %>% filter(Werksnummer==1031),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1031")
+
+Y2009_1041 <- ggplot(Y2009 %>% filter(Werksnummer==1041),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1041")
+
+Y2009_1051 <- ggplot(Y2009 %>% filter(Werksnummer==1051),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1051")
+
+Y2009_1061 <- ggplot(Y2009 %>% filter(Werksnummer==1061),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1061")
+
+Y2009_1071 <- ggplot(Y2009 %>% filter(Werksnummer==1071),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1071")
+
+Y2009_1072 <- ggplot(Y2009 %>% filter(Werksnummer==1072),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1072")
+
+Y2009_1081 <- ggplot(Y2009 %>% filter(Werksnummer==1081),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1081")
+
+Y2009_1082 <- ggplot(Y2009 %>% filter(Werksnummer==1082),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1082")
+
+Y2009_1091 <- ggplot(Y2009 %>% filter(Werksnummer==1091),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1091")
+
+Y2009_1092 <- ggplot(Y2009 %>% filter(Werksnummer==1092),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1092")
+
+Y2009_1111 <- ggplot(Y2009 %>% filter(Werksnummer==1111),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1111")
+
+Y2009_1121 <- ggplot(Y2009 %>% filter(Werksnummer==1121),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1121")
+
+Y2009_1122 <- ggplot(Y2009 %>% filter(Werksnummer==1122),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1122")
+
+Y2009_1132 <- ggplot(Y2009 %>% filter(Werksnummer==1132),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1132")
+
+Y2009_1142 <- ggplot(Y2009 %>% filter(Werksnummer==1142),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2009_1142")
+
+
+```
+``` {r Pareto Charts 2010, eval=FALSE, include=FALSE}
+Y2010_1011 <- ggplot(Y2010 %>% filter(Werksnummer==1011),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1011")
+
+Y2010_1021 <- ggplot(Y2010 %>% filter(Werksnummer==1021),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1021")
+
+Y2010_1031 <- ggplot(Y2010 %>% filter(Werksnummer==1031),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1031")
+
+Y2010_1041 <- ggplot(Y2010 %>% filter(Werksnummer==1041),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1041")
+
+Y2010_1051 <- ggplot(Y2010 %>% filter(Werksnummer==1051),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1051")
+
+Y2010_1061 <- ggplot(Y2010 %>% filter(Werksnummer==1061),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1061")
+
+Y2010_1071 <- ggplot(Y2010 %>% filter(Werksnummer==1071),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1071")
+
+Y2010_1072 <- ggplot(Y2010 %>% filter(Werksnummer==1072),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1072")
+
+Y2010_1081 <- ggplot(Y2010 %>% filter(Werksnummer==1081),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1081")
+
+Y2010_1082 <- ggplot(Y2010 %>% filter(Werksnummer==1082),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1082")
+
+Y2010_1091 <- ggplot(Y2010 %>% filter(Werksnummer==1091),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1091")
+
+Y2010_1092 <- ggplot(Y2010 %>% filter(Werksnummer==1092),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1092")
+
+Y2010_1111 <- ggplot(Y2010 %>% filter(Werksnummer==1111),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1111")
+
+Y2010_1121 <- ggplot(Y2010 %>% filter(Werksnummer==1121),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1211")
+
+Y2010_1122 <- ggplot(Y2010 %>% filter(Werksnummer==1122),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1122")
+
+Y2010_1132 <- ggplot(Y2010 %>% filter(Werksnummer==1132),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1132")
+
+Y2010_1142 <- ggplot(Y2010 %>% filter(Werksnummer==1142),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2010_1142")
+
+
+```
+``` {r Pareto Charts 2011, eval=FALSE, include=FALSE}
+Y2011_1011 <- ggplot(Y2011 %>% filter(Werksnummer==1011),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1011")
+
+Y2011_1021 <- ggplot(Y2011 %>% filter(Werksnummer==1021),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1021")
+
+Y2011_1031 <- ggplot(Y2011 %>% filter(Werksnummer==1031),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1031")
+
+Y2011_1041 <- ggplot(Y2011 %>% filter(Werksnummer==1041),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1041")
+
+Y2011_1051 <- ggplot(Y2011 %>% filter(Werksnummer==1051),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1051")
+
+Y2011_1061 <- ggplot(Y2011 %>% filter(Werksnummer==1061),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1061")
+
+Y2011_1071 <- ggplot(Y2011 %>% filter(Werksnummer==1071),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1071")
+
+Y2011_1072 <- ggplot(Y2011 %>% filter(Werksnummer==1072),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1072")
+
+Y2011_1081 <- ggplot(Y2011 %>% filter(Werksnummer==1081),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1081")
+
+Y2011_1082 <- ggplot(Y2011 %>% filter(Werksnummer==1082),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1082")
+
+Y2011_1091 <- ggplot(Y2011 %>% filter(Werksnummer==1091),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1091")
+
+Y2011_1092 <- ggplot(Y2011 %>% filter(Werksnummer==1092),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1092")
+
+Y2011_1111 <- ggplot(Y2011 %>% filter(Werksnummer==1111),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1111")
+
+Y2011_1121 <- ggplot(Y2011 %>% filter(Werksnummer==1121),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1121")
+
+Y2011_1122 <- ggplot(Y2011 %>% filter(Werksnummer==1122),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1122")
+
+Y2011_1132 <- ggplot(Y2011 %>% filter(Werksnummer==1132),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1132")
+
+Y2011_1142 <- ggplot(Y2011 %>% filter(Werksnummer==1142),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2011_1142")
+
+
+```
+``` {r Pareto Charts 2012, eval=FALSE, include=FALSE}
+Y2012_1011 <- ggplot(Y2012 %>% filter(Werksnummer==1011),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1011")
+
+Y2012_1021 <- ggplot(Y2012 %>% filter(Werksnummer==1021),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1021")
+
+Y2012_1031 <- ggplot(Y2012 %>% filter(Werksnummer==1031),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1031")
+
+Y2012_1041 <- ggplot(Y2012 %>% filter(Werksnummer==1041),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1041")
+
+Y2012_1051 <- ggplot(Y2012 %>% filter(Werksnummer==1051),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1051")
+
+Y2012_1061 <- ggplot(Y2012 %>% filter(Werksnummer==1061),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1061")
+
+Y2012_1071 <- ggplot(Y2012 %>% filter(Werksnummer==1071),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1071")
+
+Y2012_1072 <- ggplot(Y2012 %>% filter(Werksnummer==1072),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1072")
+
+Y2012_1081 <- ggplot(Y2012 %>% filter(Werksnummer==1081),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1081")
+
+Y2012_1082 <- ggplot(Y2012 %>% filter(Werksnummer==1082),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1082")
+
+Y2012_1091 <- ggplot(Y2012 %>% filter(Werksnummer==1091),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1091")
+
+Y2012_1092 <- ggplot(Y2012 %>% filter(Werksnummer==1092),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1092")
+
+Y2012_1111 <- ggplot(Y2012 %>% filter(Werksnummer==1111),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1111")
+
+Y2012_1121 <- ggplot(Y2012 %>% filter(Werksnummer==1121),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1121")
+
+Y2012_1122 <- ggplot(Y2012 %>% filter(Werksnummer==1122),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1122")
+
+Y2012_1132 <- ggplot(Y2012 %>% filter(Werksnummer==1132),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1132")
+
+Y2012_1141 <- ggplot(Y2012 %>% filter(Werksnummer==1141),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1141")
+
+Y2012_1142 <- ggplot(Y2012 %>% filter(Werksnummer==1142),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2012_1142")
+
+
+```
+``` {r Pareto Charts 2013, eval=FALSE, include=FALSE}
+Y2013_1011 <- ggplot(Y2013 %>% filter(Werksnummer==1011),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1011")
+
+Y2013_1021 <- ggplot(Y2013 %>% filter(Werksnummer==1021),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1021")
+
+Y2013_1031 <- ggplot(Y2013 %>% filter(Werksnummer==1031),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1031")
+
+Y2013_1041 <- ggplot(Y2013 %>% filter(Werksnummer==1041),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1041")
+
+Y2013_1051 <- ggplot(Y2013 %>% filter(Werksnummer==1051),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1051")
+
+Y2013_1061 <- ggplot(Y2013 %>% filter(Werksnummer==1061),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1061")
+
+Y2013_1071 <- ggplot(Y2013 %>% filter(Werksnummer==1071),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1071")
+
+Y2013_1072 <- ggplot(Y2013 %>% filter(Werksnummer==1072),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1072")
+
+Y2013_1081 <- ggplot(Y2013 %>% filter(Werksnummer==1081),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1081")
+
+Y2013_1082 <- ggplot(Y2013 %>% filter(Werksnummer==1082),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1081")
+
+Y2013_1091 <- ggplot(Y2013 %>% filter(Werksnummer==1091),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1091")
+
+Y2013_1092 <- ggplot(Y2013 %>% filter(Werksnummer==1092),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1092")
+
+Y2013_1101 <- ggplot(Y2013 %>% filter(Werksnummer==1101),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1102")
+
+Y2013_1111 <- ggplot(Y2013 %>% filter(Werksnummer==1111),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1111")
+
+Y2013_1122 <- ggplot(Y2013 %>% filter(Werksnummer==1122),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1122")
+
+Y2013_1131 <- ggplot(Y2013 %>% filter(Werksnummer==1131),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_131")
+
+Y2013_1132 <- ggplot(Y2013 %>% filter(Werksnummer==1132),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1132")
+
+Y2013_1141 <- ggplot(Y2013 %>% filter(Werksnummer==1141),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2013_1141")
+
+
+```
+``` {r Pareto Charts 2014, eval=FALSE, include=FALSE}
+Y2014_1011 <- ggplot(Y2014 %>% filter(Werksnummer==1011),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1011")
+
+Y2014_1021 <- ggplot(Y2014 %>% filter(Werksnummer==1021),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1021")
+
+Y2014_1031 <- ggplot(Y2014 %>% filter(Werksnummer==1031),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1031")
+
+Y2014_1041 <- ggplot(Y2014 %>% filter(Werksnummer==1041),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1041")
+
+Y2014_1051 <- ggplot(Y2014 %>% filter(Werksnummer==1051),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1051")
+
+Y2014_1061 <- ggplot(Y2014 %>% filter(Werksnummer==1061),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1061")
+
+Y2014_1071 <- ggplot(Y2014 %>% filter(Werksnummer==1071),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1071")
+
+Y2014_1072 <- ggplot(Y2014 %>% filter(Werksnummer==1072),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1072")
+
+Y2014_1081 <- ggplot(Y2014 %>% filter(Werksnummer==1081),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1081")
+
+Y2014_1082 <- ggplot(Y2014 %>% filter(Werksnummer==1082),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1082")
+
+Y2014_1091 <- ggplot(Y2014 %>% filter(Werksnummer==1091),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1091")
+
+Y2014_1092 <- ggplot(Y2014 %>% filter(Werksnummer==1092),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1092")
+
+Y2014_1111 <- ggplot(Y2014 %>% filter(Werksnummer==1111),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1111")
+
+Y2014_1101 <- ggplot(Y2014 %>% filter(Werksnummer==1101),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1101")
+
+Y2014_1131 <- ggplot(Y2014 %>% filter(Werksnummer==1131),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1131")
+
+Y2014_1132 <- ggplot(Y2014 %>% filter(Werksnummer==1132),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1132")
+
+Y2014_1141 <- ggplot(Y2014 %>% filter(Werksnummer==1141),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2014_1141")
+
+
+```
+``` {r Pareto Charts 2015, eval=FALSE, include=FALSE}
+Y2015_1011 <- ggplot(Y2015 %>% filter(Werksnummer==1011),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1011")
+
+Y2015_1021 <- ggplot(Y2015 %>% filter(Werksnummer==1021),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1021")
+
+Y2015_1031 <- ggplot(Y2015 %>% filter(Werksnummer==1031),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1031")
+
+Y2015_1041 <- ggplot(Y2015 %>% filter(Werksnummer==1041),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1041")
+
+Y2015_1051 <- ggplot(Y2015 %>% filter(Werksnummer==1051),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1051")
+
+Y2015_1061 <- ggplot(Y2015 %>% filter(Werksnummer==1061),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1061")
+
+Y2015_1071 <- ggplot(Y2015 %>% filter(Werksnummer==1071),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1071")
+
+Y2015_1072 <- ggplot(Y2015 %>% filter(Werksnummer==1072),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1072")
+
+Y2015_1081 <- ggplot(Y2015 %>% filter(Werksnummer==1081),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1081")
+
+Y2015_1082 <- ggplot(Y2015 %>% filter(Werksnummer==1082),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1082")
+
+Y2015_1091 <- ggplot(Y2015 %>% filter(Werksnummer==1091),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1091")
+
+Y2015_1092 <- ggplot(Y2015 %>% filter(Werksnummer==1092),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1092")
+
+Y2015_1111 <- ggplot(Y2015 %>% filter(Werksnummer==1111),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1111")
+
+Y2015_1101 <- ggplot(Y2015 %>% filter(Werksnummer==1101),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1101")
+
+Y2015_1131 <- ggplot(Y2015 %>% filter(Werksnummer==1131),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1131")
+
+Y2015_1132 <- ggplot(Y2015 %>% filter(Werksnummer==1132),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1132")
+
+Y2015_1141 <- ggplot(Y2015 %>% filter(Werksnummer==1141),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2015_1141")
+
+
+```
+``` {r Pareto Charts 2016, eval=FALSE, include=FALSE}
+Y2016_1011 <- ggplot(Y2016 %>% filter(Werksnummer==1011),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2016_1011")
+
+Y2016_1021 <- ggplot(Y2016 %>% filter(Werksnummer==1021),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2016_1021")
+
+Y2016_1031 <- ggplot(Y2016 %>% filter(Werksnummer==1031),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2016_1031")
+
+Y2016_1041 <- ggplot(Y2016 %>% filter(Werksnummer==1041),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2016_1041")
+
+Y2016_1051 <- ggplot(Y2016 %>% filter(Werksnummer==1051),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2016_1051")
+
+Y2016_1061 <- ggplot(Y2016 %>% filter(Werksnummer==1061),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2016_1061")
+
+Y2016_1071 <- ggplot(Y2016 %>% filter(Werksnummer==1071),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2016_1071")
+
+Y2016_1072 <- ggplot(Y2016 %>% filter(Werksnummer==1072),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2016_1072")
+
+Y2016_1081 <- ggplot(Y2016 %>% filter(Werksnummer==1081),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2016_1081")
+
+Y2016_1082 <- ggplot(Y2016 %>% filter(Werksnummer==1082),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2016_1082")
+
+Y2016_1091 <- ggplot(Y2016 %>% filter(Werksnummer==1091),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2016_1091")
+
+Y2016_1092 <- ggplot(Y2016 %>% filter(Werksnummer==1092),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2016_1092")
+
+Y2016_1111 <- ggplot(Y2016 %>% filter(Werksnummer==1111),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2016_1111")
+
+Y2016_1101 <- ggplot(Y2016 %>% filter(Werksnummer==1101),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2016_1101")
+
+Y2016_1132 <- ggplot(Y2016 %>% filter(Werksnummer==1132),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2016_1132")
+
+Y2016_1141 <- ggplot(Y2016 %>% filter(Werksnummer==1141),aes(x=ID_Komponente,y=Defect)) + stat_pareto() + labs(title="Y2016_1141")
+
+
+```
+```{r 2008-Monthly Plots, eval=FALSE, include=FALSE}
+Y2008_K7_ <- ggplot(Y2008_K7) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2008_K7")
+
+Y2008_K6_ <- ggplot(Y2008_K6) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2008_K6")
+
+Y2008_K5_ <- ggplot(Y2008_K5) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2008_K5")
+
+Y2008_K4_ <- ggplot(Y2008_K4) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2008_K4")
+
+Y2008_K3SG2_ <- ggplot(Y2008_K3SG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2008_K3SG2")
+
+Y2008_K3SG1_ <- ggplot(Y2008_K3SG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2008_K3SG1")
+
+Y2008_K3AG2_ <- ggplot(Y2008_K3AG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2008_K3AG2")
+
+Y2008_K3AG1_ <- ggplot(Y2008_K3AG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2008_K3AG1")
+
+Y2008_K2ST2_ <- ggplot(Y2008_K2ST2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2008_K2ST2")
+
+Y2008_K2ST1_ <- ggplot(Y2008_K2ST1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2008_K2ST1")
+
+Y2008_K2LE2_ <- ggplot(Y2008_K2LE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2008_K2LE2")
+
+Y2008_K2LE1_ <- ggplot(Y2008_K2LE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2008_K2LE1")
+
+Y2008_K1DI2_ <- ggplot(Y2008_K1DI2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2008_K1DI2")
+
+Y2008_K1DI1_ <- ggplot(Y2008_K1DI1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2008_K1DI1")
+
+Y2008_K1BE2_ <- ggplot(Y2008_K1BE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2008_K1BE2")
+
+Y2008_K1BE1_ <- ggplot(Y2008_K1BE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2008_K1BE1")
+```
+```{r 2009-Monthly Plots, eval=FALSE, include=FALSE}
+Y2009_K7_ <- ggplot(Y2009_K7) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2009_K7")
+
+Y2009_K6_ <- ggplot(Y2009_K6) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2009_K6")
+
+Y2009_K5_ <- ggplot(Y2009_K5) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2009_K5")
+
+Y2009_K4_ <- ggplot(Y2009_K4) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2009_K4")
+
+Y2009_K3SG2_ <- ggplot(Y2009_K3SG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2009_K3SG2")
+
+Y2009_K3SG1_ <- ggplot(Y2009_K3SG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2009_K3SG1")
+
+Y2009_K3AG2_ <- ggplot(Y2009_K3AG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2009_K3AG2")
+
+Y2009_K3AG1_ <- ggplot(Y2009_K3AG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2009_K3AG1")
+
+Y2009_K2ST2_ <- ggplot(Y2009_K2ST2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2009_K2ST2")
+
+Y2009_K2ST1_ <- ggplot(Y2009_K2ST1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2009_K2ST1")
+
+Y2009_K2LE2_ <- ggplot(Y2009_K2LE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2009_K2LE2")
+
+Y2009_K2LE1_ <- ggplot(Y2009_K2LE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2009_K2LE1")
+
+Y2009_K1DI2_ <- ggplot(Y2009_K1DI2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2009_K1DI2")
+
+Y2009_K1DI1_ <- ggplot(Y2009_K1DI1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2009_K1DI1")
+
+Y2009_K1BE2_ <- ggplot(Y2009_K1BE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2009_K1BE2")
+
+Y2009_K1BE1_ <- ggplot(Y2009_K1BE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2009_K1BE1")
+```
+```{r 2010-Monthly Plots, eval=FALSE, include=FALSE}
+Y2010_K7_ <- ggplot(Y2010_K7) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2010_K7")
+
+Y2010_K6_ <- ggplot(Y2010_K6) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2010_K6")
+
+Y2010_K5_ <- ggplot(Y2010_K5) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2010_K5")
+
+Y2010_K4_ <- ggplot(Y2010_K4) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2010_K4")
+
+Y2010_K3SG2_ <- ggplot(Y2010_K3SG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2010_K3SG2")
+
+Y2010_K3SG1_ <- ggplot(Y2010_K3SG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2010_K3SG1")
+
+Y2010_K3AG2_ <- ggplot(Y2010_K3AG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2010_K3AG2")
+
+Y2010_K3AG1_ <- ggplot(Y2010_K3AG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2010_K3AG1")
+
+Y2010_K2ST2_ <- ggplot(Y2010_K2ST2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2010_K2ST2")
+
+Y2010_K2ST1_ <- ggplot(Y2010_K2ST1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2010_K2ST1")
+
+Y2010_K2LE2_ <- ggplot(Y2010_K2LE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2010_K2LE2")
+
+Y2010_K2LE1_ <- ggplot(Y2010_K2LE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2010_K2LE1")
+
+Y2010_K1DI2_ <- ggplot(Y2010_K1DI2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2010_K1DI2")
+
+Y2010_K1DI1_ <- ggplot(Y2010_K1DI1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2010_K1DI1")
+
+Y2010_K1BE2_ <- ggplot(Y2010_K1BE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2010_K1BE2")
+
+Y2010_K1BE1_ <- ggplot(Y2010_K1BE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2010_K1BE1")
+```
+```{r 2011-Monthly Plots, eval=FALSE, include=FALSE}
+Y2011_K7_ <- ggplot(Y2011_K7) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2011_K7")
+
+Y2011_K6_ <- ggplot(Y2011_K6) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2011_K6")
+
+Y2011_K5_ <- ggplot(Y2011_K5) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2011_K5")
+
+Y2011_K4_ <- ggplot(Y2011_K4) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2011_K4")
+
+Y2011_K3SG2_ <- ggplot(Y2011_K3SG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2011_K3SG2")
+
+Y2011_K3SG1_ <- ggplot(Y2011_K3SG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2011_K3SG1")
+
+Y2011_K3AG2_ <- ggplot(Y2011_K3AG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2011_K3AG2")
+
+Y2011_K3AG1_ <- ggplot(Y2011_K3AG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2011_K3AG1")
+
+Y2011_K2ST2_ <- ggplot(Y2011_K2ST2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2011_K2ST2")
+
+Y2011_K2ST1_ <- ggplot(Y2011_K2ST1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2011_K2ST1")
+
+Y2011_K2LE2_ <- ggplot(Y2011_K2LE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2011_K2LE2")
+
+Y2011_K2LE1_ <- ggplot(Y2011_K2LE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2011_K2LE1")
+
+Y2011_K1DI2_ <- ggplot(Y2011_K1DI2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2011_K1DI2")
+
+Y2011_K1DI1_ <- ggplot(Y2011_K1DI1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2011_K1DI1")
+
+Y2011_K1BE2_ <- ggplot(Y2011_K1BE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2011_K1BE2")
+
+Y2011_K1BE1_ <- ggplot(Y2011_K1BE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2011_K1BE1")
+```
+```{r 2012-Monthly Plots, eval=FALSE, include=FALSE}
+Y2012_K7_ <- ggplot(Y2012_K7) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2012_K7")
+
+Y2012_K6_ <- ggplot(Y2012_K6) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2012_K6")
+
+Y2012_K5_ <- ggplot(Y2012_K5) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2012_K5")
+
+Y2012_K4_ <- ggplot(Y2012_K4) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2012_K4")
+
+Y2012_K3SG2_ <- ggplot(Y2012_K3SG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2012_K3SG2")
+
+Y2012_K3SG1_ <- ggplot(Y2012_K3SG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2012_K3SG1")
+
+Y2012_K3AG2_ <- ggplot(Y2012_K3AG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2012_K3AG2")
+
+Y2012_K3AG1_ <- ggplot(Y2012_K3AG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2012_K3AG1")
+
+Y2012_K2ST2_ <- ggplot(Y2012_K2ST2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2012_K2ST2")
+
+Y2012_K2ST1_ <- ggplot(Y2012_K2ST1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2012_K2ST1")
+
+Y2012_K2LE2_ <- ggplot(Y2012_K2LE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2012_K2LE2")
+
+Y2012_K2LE1_ <- ggplot(Y2012_K2LE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2012_K2LE1")
+
+Y2012_K1DI2_ <- ggplot(Y2012_K1DI2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2012_K1DI2")
+
+Y2012_K1DI1_ <- ggplot(Y2012_K1DI1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2012_K1DI1")
+
+Y2012_K1BE2_ <- ggplot(Y2012_K1BE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2012_K1BE2")
+
+Y2012_K1BE1_ <- ggplot(Y2012_K1BE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2012_K1BE1")
+```
+```{r 2013-Monthly Plots, eval=FALSE, include=FALSE}
+Y2013_K7_ <- ggplot(Y2013_K7) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2013_K7")
+
+Y2013_K6_ <- ggplot(Y2013_K6) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2013_K6")
+
+Y2013_K5_ <- ggplot(Y2013_K5) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2013_K5")
+
+Y2013_K4_ <- ggplot(Y2013_K4) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2013_K4")
+
+Y2013_K3SG2_ <- ggplot(Y2013_K3SG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2013_K3SG2")
+
+Y2013_K3SG1_ <- ggplot(Y2013_K3SG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2013_K3SG1")
+
+Y2013_K3AG2_ <- ggplot(Y2013_K3AG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2013_K3AG2")
+
+Y2013_K3AG1_ <- ggplot(Y2013_K3AG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2013_K3AG1")
+
+Y2013_K2ST2_ <- ggplot(Y2013_K2ST2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2013_K2ST2")
+
+Y2013_K2ST1_ <- ggplot(Y2013_K2ST1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2013_K2ST1")
+
+Y2013_K2LE2_ <- ggplot(Y2013_K2LE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2013_K2LE2")
+
+Y2013_K2LE1_ <- ggplot(Y2013_K2LE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2013_K2LE1")
+
+Y2013_K1DI2_ <- ggplot(Y2013_K1DI2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2013_K1DI2")
+
+Y2013_K1DI1_ <- ggplot(Y2013_K1DI1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2013_K1DI1")
+
+Y2013_K1BE2_ <- ggplot(Y2013_K1BE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2013_K1BE2")
+
+Y2013_K1BE1_ <- ggplot(Y2013_K1BE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2013_K1BE1")
+```
+```{r 2014-Monthly Plot, eval=FALSE, include=FALSE}
+Y2014_K7_ <- ggplot(Y2014_K7) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2014_K7")
+
+Y2014_K6_ <- ggplot(Y2014_K6) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2014_K6")
+
+Y2014_K5_ <- ggplot(Y2014_K5) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2014_K5")
+
+Y2014_K4_ <- ggplot(Y2014_K4) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2014_K4")
+
+Y2014_K3SG2_ <- ggplot(Y2014_K3SG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2014_K3SG2")
+
+Y2014_K3SG1_ <- ggplot(Y2014_K3SG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2014_K3SG1")
+
+Y2014_K3AG2_ <- ggplot(Y2014_K3AG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2014_K3AG2")
+
+Y2014_K3AG1_ <- ggplot(Y2014_K3AG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2014_K3AG1")
+
+Y2014_K2ST2_ <- ggplot(Y2014_K2ST2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2014_K2ST2")
+
+Y2014_K2ST1_ <- ggplot(Y2014_K2ST1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2014_K2ST1")
+
+Y2014_K2LE2_ <- ggplot(Y2014_K2LE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2014_K2LE2")
+
+Y2014_K2LE1_ <- ggplot(Y2014_K2LE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2014_K2LE1")
+
+Y2014_K1DI2_ <- ggplot(Y2014_K1DI2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2014_K1DI2")
+
+Y2014_K1DI1_ <- ggplot(Y2014_K1DI1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2014_K1DI1")
+
+Y2014_K1BE2_ <- ggplot(Y2014_K1BE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2014_K1BE2")
+
+Y2014_K1BE1_ <- ggplot(Y2014_K1BE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2014_K1BE1")
+```
+```{r 2015-Monthly Plot, eval=FALSE, include=FALSE}
+Y2015_K7_ <- ggplot(Y2015_K7) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2015_K7")
+
+Y2015_K6_ <- ggplot(Y2015_K6) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2015_K6")
+
+Y2015_K5_ <- ggplot(Y2015_K5) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2015_K5")
+
+Y2015_K4_ <- ggplot(Y2015_K4) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2015_K4")
+
+Y2015_K3SG2_ <- ggplot(Y2015_K3SG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2015_K3SG2")
+
+Y2015_K3SG1_ <- ggplot(Y2015_K3SG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2015_K3SG1")
+
+Y2015_K3AG2_ <- ggplot(Y2015_K3AG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2015_K3AG2")
+
+Y2015_K3AG1_ <- ggplot(Y2015_K3AG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2015_K3AG1")
+
+Y2015_K2ST2_ <- ggplot(Y2015_K2ST2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2015_K2ST2")
+
+Y2015_K2ST1_ <- ggplot(Y2015_K2ST1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2015_K2ST1")
+
+Y2015_K2LE2_ <- ggplot(Y2015_K2LE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2015_K2LE2")
+
+Y2015_K2LE1_ <- ggplot(Y2015_K2LE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2015_K2LE1")
+
+Y2015_K1DI2_ <- ggplot(Y2015_K1DI2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2015_K1DI2")
+
+Y2015_K1DI1_ <- ggplot(Y2015_K1DI1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2015_K1DI1")
+
+Y2015_K1BE2_ <- ggplot(Y2015_K1BE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2015_K1BE2")
+
+Y2015_K1BE1_ <- ggplot(Y2015_K1BE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2015_K1BE1")
+```
+```{r 2016-Monthly Plot, eval=FALSE, include=FALSE}
+Y2016_K7_ <- ggplot(Y2016_K7) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2016_K7")
+
+Y2016_K6_ <- ggplot(Y2016_K6) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2016_K6")
+
+Y2016_K5_ <- ggplot(Y2016_K5) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2016_K5")
+
+Y2016_K4_ <- ggplot(Y2016_K4) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2016_K4")
+
+Y2016_K3SG2_ <- ggplot(Y2016_K3SG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2016_K3SG2")
+
+Y2016_K3SG1_ <- ggplot(Y2016_K3SG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2016_K3SG1")
+
+Y2016_K3AG2_ <- ggplot(Y2016_K3AG2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2016_K3AG2")
+
+Y2016_K3AG1_ <- ggplot(Y2016_K3AG1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2016_K3AG1")
+
+Y2016_K2ST2_ <- ggplot(Y2016_K2ST2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2016_K2ST2")
+
+Y2016_K2ST1_ <- ggplot(Y2016_K2ST1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2016_K2ST1")
+
+Y2016_K2LE2_ <- ggplot(Y2016_K2LE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2016_K2LE2")
+
+Y2016_K2LE1_ <- ggplot(Y2016_K2LE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2016_K2LE1")
+
+Y2016_K1DI2_ <- ggplot(Y2016_K1DI2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2016_K1DI2")
+
+Y2016_K1DI1_ <- ggplot(Y2016_K1DI1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2016_K1DI1")
+
+Y2016_K1BE2_ <- ggplot(Y2016_K1BE2) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2016_K1BE2")
+
+Y2016_K1BE1_ <- ggplot(Y2016_K1BE1) + geom_point(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_line(aes(x=Produktionsdatum,y=Defect,color=Werksnummer,group=Werksnummer)) + geom_point(aes(x=Produktionsdatum,y=cumulative,colour="Cumulative Defects")) + labs(title="Y2016_K1BE1")
+```
+
+#                                         <b> SHINY APPLICATION </b>
+
+
+<b> User Manual: </b>
+
+Kindly Select the Year Using the slider and select a  Werksnummer to display the <b> Pareto Chart </b> which would display the Error freqeuncies of Components produced in the selected Factory and the Selected Year.
+
+Kindly Select the Year Using the slider and select a Komponents ID to display the <b> INTERACTIVE - Line Diagram </b> indicating the Defects of the selected component over the year, the line diagram will indicate each of the component producing factories with a seperate line and it will aslo display the cumulative defects for the year split into months. <b> Kindly hover over the data points to get an interavtive view of the data values </b> 
+
+<b> Note: </b>
+
+Werksnummer is indicated by 1011,1021,1092,.. etc.,
+
+Component ID's are indicated by K4,K5, K4,K3SG2,.. etc.,
+
+<b> Additioanl Note :</b>
+
+If a Chart is not displayed for a selected option, it would mean that the Selected Factory Did not produce components in that particular selected year.
+```{r Shiny App, echo=FALSE, message=FALSE, warning=FALSE}
+
+
+ui <- fluidPage(
+  titlePanel("Input Menu:"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(inputId = "Werksnummer", "Select a Werksnummer for the Pareto Chart: ", choices = list("1011" ,"1021", "1031", "1041", "1051", "1061", "1071", "1072", "1081", "1082", "1091", "1092", "1111","1011", "1101", "1121", "1122", "1132", "1141", "1142")), 
+      
+      selectInput(inputId = "Komponente", "Select a Component for the Interactive Line Diagram: ", choices = list("K4" ,"K5", "K6", "K7","K3SG2", "K3SG1", "K3AG2", "K3AG1","K2ST2", "K2ST1", "K2LE2", "K2LE1", "K1DI2", "K1DI1", "K1BE2", "K1BE1")),
+      
+      sliderInput("slider1", h3("Select Year"),
+                       min = 2008, max = 2016, value = 2016,step=1),width=6),
+  
+    
+    
+    
+  mainPanel("PARETO CHARTS FOR INDIVIDUAL FACTORIES   ..................................................................................................................................  INTERACTIVE - LINE DIAGRAMS FOR INDIVIDUAL COMPONENTS",
+                          fluidRow(
+                            splitLayout(cellWidths = c("80%", "80%"), plotOutput("plot1",width="100%",height= "600px"), plotlyOutput("plot2",,width="100%",height= "600px"))
+                          )
+                )
+  ))
+
+
+
+server <- function(input, output) {
+  output$plot1 <- renderPlot({
+    
+    if(input$slider1 == 2008 & input$Werksnummer == "1011"){
+      Y2008_1011
+    }
+    else if(input$slider1 == 2008 & input$Werksnummer == "1021"){
+      Y2008_1021
+    }
+    else if(input$slider1 == 2008 & input$Werksnummer == "1031"){
+      Y2008_1031
+    }
+    else if(input$slider1 == 2008 & input$Werksnummer == "1041"){
+      Y2008_1041
+    }
+    else if(input$slider1 == 2008 & input$Werksnummer == "1041"){
+      Y2008_1041
+    }
+    else if(input$slider1 == 2008 & input$Werksnummer == "1051"){
+      Y2008_1051
+    }
+    else if(input$slider1 == 2008 & input$Werksnummer == "1061"){
+      Y2008_1061
+    }
+    else if(input$slider1 == 2008 & input$Werksnummer == "1071"){
+      Y2008_1071
+    }
+    else if(input$slider1 == 2008 & input$Werksnummer == "1072"){
+      Y2008_1072
+    }
+    else if(input$slider1 == 2008 & input$Werksnummer == "1081"){
+      Y2008_1081
+    }
+    else if(input$slider1 == 2008 & input$Werksnummer == "1082"){
+      Y2008_1082
+    }
+    else if(input$slider1 == 2008 & input$Werksnummer == "1091"){
+      Y2008_1091
+    }
+    else if(input$slider1 == 2008 & input$Werksnummer == "1092"){
+      Y2008_1092
+    }
+    else if(input$slider1 == 2008 & input$Werksnummer == "1111"){
+      Y2008_1111
+    }
+   else if(input$slider1 == 2008 & input$Werksnummer == "1121"){
+      Y2008_1121
+   }
+    else if(input$slider1 == 2008 & input$Werksnummer == "1122"){
+      Y2008_1122
+    }
+    else if(input$slider1 == 2008 & input$Werksnummer == "1132"){
+      Y2008_1132
+    }
+    else if(input$slider1 == 2008 & input$Werksnummer == "1142"){
+      Y2008_1142
+    }
+    
+    else if(input$slider1 == 2009 & input$Werksnummer == "1011"){
+      Y2009_1011
+    }
+    else if(input$slider1 == 2009 & input$Werksnummer == "1021"){
+      Y2009_1021
+    }
+    else if(input$slider1 == 2009 & input$Werksnummer == "1031"){
+      Y2009_1031
+    }
+    else if(input$slider1 == 2009 & input$Werksnummer == "1041"){
+      Y2009_1041
+    }
+    else if(input$slider1 == 2009 & input$Werksnummer == "1041"){
+      Y2009_1041
+    }
+    else if(input$slider1 == 2009 & input$Werksnummer == "1051"){
+      Y2009_1051
+    }
+    else if(input$slider1 == 2009 & input$Werksnummer == "1061"){
+      Y2009_1061
+    }
+    else if(input$slider1 == 2009 & input$Werksnummer == "1071"){
+      Y2009_1071
+    }
+    else if(input$slider1 == 2009 & input$Werksnummer == "1072"){
+      Y2009_1072
+    }
+    else if(input$slider1 == 2009 & input$Werksnummer == "1081"){
+      Y2009_1081
+    }
+    else if(input$slider1 == 2009 & input$Werksnummer == "1082"){
+      Y2009_1082
+    }
+    else if(input$slider1 == 2009 & input$Werksnummer == "1091"){
+      Y2009_1091
+    }
+    else if(input$slider1 == 2009 & input$Werksnummer == "1092"){
+      Y2009_1092
+    }
+    else if(input$slider1 == 2009 & input$Werksnummer == "1111"){
+      Y2009_1111
+    }
+   else if(input$slider1 == 2009 & input$Werksnummer == "1121"){
+      Y2009_1121
+   }
+    else if(input$slider1 == 2009 & input$Werksnummer == "1122"){
+      Y2009_1122
+    }
+    else if(input$slider1 == 2009 & input$Werksnummer == "1132"){
+      Y2009_1132
+    }
+    else if(input$slider1 == 2009 & input$Werksnummer == "1142"){
+      Y2009_1142
+    }
+    
+    else if(input$slider1 == 2010 & input$Werksnummer == "1011"){
+      Y2010_1011
+    }
+    else if(input$slider1 == 2010 & input$Werksnummer == "1021"){
+      Y2010_1021
+    }
+    else if(input$slider1 == 2010 & input$Werksnummer == "1031"){
+      Y2010_1031
+    }
+    else if(input$slider1 == 2010 & input$Werksnummer == "1041"){
+      Y2010_1041
+    }
+    else if(input$slider1 == 2010 & input$Werksnummer == "1041"){
+      Y2010_1041
+    }
+    else if(input$slider1 == 2010 & input$Werksnummer == "1051"){
+      Y2010_1051
+    }
+    else if(input$slider1 == 2010 & input$Werksnummer == "1061"){
+      Y2010_1061
+    }
+    else if(input$slider1 == 2010 & input$Werksnummer == "1071"){
+      Y2010_1071
+    }
+    else if(input$slider1 == 2010 & input$Werksnummer == "1072"){
+      Y2010_1072
+    }
+    else if(input$slider1 == 2010 & input$Werksnummer == "1081"){
+      Y2010_1081
+    }
+    else if(input$slider1 == 2010 & input$Werksnummer == "1082"){
+      Y2010_1082
+    }
+    else if(input$slider1 == 2010 & input$Werksnummer == "1091"){
+      Y2010_1091
+    }
+    else if(input$slider1 == 2010 & input$Werksnummer == "1092"){
+      Y2010_1092
+    }
+    else if(input$slider1 == 2010 & input$Werksnummer == "1111"){
+      Y2010_1111
+    }
+   else if(input$slider1 == 2010 & input$Werksnummer == "1121"){
+      Y2010_1121
+   }
+    else if(input$slider1 == 2010 & input$Werksnummer == "1122"){
+      Y2010_1122
+    }
+    else if(input$slider1 == 2010 & input$Werksnummer == "1132"){
+      Y2010_1132
+    }
+    else if(input$slider1 == 2010 & input$Werksnummer == "1142"){
+      Y2010_1142
+    }
+    
+    else if(input$slider1 == 2011 & input$Werksnummer == "1011"){
+      Y2011_1011
+    }
+    else if(input$slider1 == 2011 & input$Werksnummer == "1021"){
+      Y2011_1021
+    }
+    else if(input$slider1 == 2011 & input$Werksnummer == "1031"){
+      Y2011_1031
+    }
+    else if(input$slider1 == 2011 & input$Werksnummer == "1041"){
+      Y2011_1041
+    }
+    else if(input$slider1 == 2011 & input$Werksnummer == "1041"){
+      Y2011_1041
+    }
+    else if(input$slider1 == 2011 & input$Werksnummer == "1051"){
+      Y2011_1051
+    }
+    else if(input$slider1 == 2011 & input$Werksnummer == "1061"){
+      Y2011_1061
+    }
+    else if(input$slider1 == 2011 & input$Werksnummer == "1071"){
+      Y2011_1071
+    }
+    else if(input$slider1 == 2011 & input$Werksnummer == "1072"){
+      Y2011_1072
+    }
+    else if(input$slider1 == 2011 & input$Werksnummer == "1081"){
+      Y2011_1081
+    }
+    else if(input$slider1 == 2011 & input$Werksnummer == "1082"){
+      Y2011_1082
+    }
+    else if(input$slider1 == 2011 & input$Werksnummer == "1091"){
+      Y2011_1091
+    }
+    else if(input$slider1 == 2011 & input$Werksnummer == "1092"){
+      Y2011_1092
+    }
+    else if(input$slider1 == 2011 & input$Werksnummer == "1111"){
+      Y2011_1111
+    }
+   else if(input$slider1 == 2011 & input$Werksnummer == "1121"){
+      Y2011_1121
+   }
+    else if(input$slider1 == 2011 & input$Werksnummer == "1122"){
+      Y2011_1122
+    }
+    else if(input$slider1 == 2011 & input$Werksnummer == "1132"){
+      Y2011_1132
+    }
+    else if(input$slider1 == 2011 & input$Werksnummer == "1142"){
+      Y2011_1142
+    }
+    
+    else if(input$slider1 == 2012 & input$Werksnummer == "1011"){
+      Y2012_1011
+    }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1021"){
+      Y2012_1021
+    }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1031"){
+      Y2012_1031
+    }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1041"){
+      Y2012_1041
+    }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1041"){
+      Y2012_1041
+    }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1051"){
+      Y2012_1051
+    }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1061"){
+      Y2012_1061
+    }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1071"){
+      Y2012_1071
+    }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1072"){
+      Y2012_1072
+    }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1081"){
+      Y2012_1081
+    }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1082"){
+      Y2012_1082
+    }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1091"){
+      Y2012_1091
+    }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1092"){
+      Y2012_1092
+    }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1111"){
+      Y2012_1111
+    }
+   else if(input$slider1 == 2012 & input$Werksnummer == "1121"){
+      Y2012_1121
+   }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1122"){
+      Y2012_1122
+    }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1132"){
+      Y2012_1132
+    }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1041"){
+      Y2012_1041
+    }
+    else if(input$slider1 == 2012 & input$Werksnummer == "1142"){
+      Y2012_1142
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1011"){
+      Y2013_1011
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1021"){
+      Y2013_1021
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1031"){
+      Y2013_1031
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1041"){
+      Y2013_1041
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1041"){
+      Y2013_1041
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1051"){
+      Y2013_1051
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1061"){
+      Y2013_1061
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1071"){
+      Y2013_1071
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1072"){
+      Y2013_1072
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1081"){
+      Y2013_1081
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1082"){
+      Y2013_1082
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1091"){
+      Y2013_1091
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1092"){
+      Y2013_1092
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1111"){
+      Y2013_1111
+    }
+   else if(input$slider1 == 2013 & input$Werksnummer == "1101"){
+      Y2013_1101
+   }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1122"){
+      Y2013_1122
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1131"){
+      Y2013_1131
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1132"){
+      Y2013_1132
+    }
+    else if(input$slider1 == 2013 & input$Werksnummer == "1141"){
+      Y2013_1141
+    }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1011"){
+      Y2014_1011
+    }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1021"){
+      Y2014_1021
+    }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1031"){
+      Y2014_1031
+    }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1041"){
+      Y2014_1041
+    }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1041"){
+      Y2014_1041
+    }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1051"){
+      Y2014_1051
+    }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1061"){
+      Y2014_1061
+    }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1071"){
+      Y2014_1071
+    }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1072"){
+      Y2014_1072
+    }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1081"){
+      Y2014_1081
+    }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1082"){
+      Y2014_1082
+    }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1091"){
+      Y2014_1091
+    }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1092"){
+      Y2014_1092
+    }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1111"){
+      Y2014_1111
+    }
+   else if(input$slider1 == 2014 & input$Werksnummer == "1101"){
+      Y2014_1101
+   }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1131"){
+      Y2014_1131
+    }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1132"){
+      Y2014_1132
+    }
+    else if(input$slider1 == 2014 & input$Werksnummer == "1141"){
+      Y2014_1141
+    }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1011"){
+      Y2015_1011
+    }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1021"){
+      Y2015_1021
+    }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1031"){
+      Y2015_1031
+    }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1041"){
+      Y2015_1041
+    }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1041"){
+      Y2015_1041
+    }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1051"){
+      Y2015_1051
+    }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1061"){
+      Y2015_1061
+    }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1071"){
+      Y2015_1071
+    }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1072"){
+      Y2015_1072
+    }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1081"){
+      Y2015_1081
+    }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1082"){
+      Y2015_1082
+    }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1091"){
+      Y2015_1091
+    }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1092"){
+      Y2015_1092
+    }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1111"){
+      Y2015_1111
+    }
+   else if(input$slider1 == 2015 & input$Werksnummer == "1101"){
+      Y2015_1101
+   }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1131"){
+      Y2015_1131
+    }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1132"){
+      Y2015_1132
+    }
+    else if(input$slider1 == 2015 & input$Werksnummer == "1141"){
+      Y2015_1141
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1011"){
+      Y2016_1011
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1021"){
+      Y2016_1021
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1031"){
+      Y2016_1031
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1041"){
+      Y2016_1041
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1041"){
+      Y2016_1041
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1051"){
+      Y2016_1051
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1061"){
+      Y2016_1061
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1071"){
+      Y2016_1071
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1072"){
+      Y2016_1072
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1081"){
+      Y2016_1081
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1082"){
+      Y2016_1082
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1091"){
+      Y2016_1091
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1092"){
+      Y2016_1092
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1101"){
+      Y2016_1101
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1111"){
+      Y2016_1111
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1132"){
+      Y2016_1132
+    }
+    else if(input$slider1 == 2016 & input$Werksnummer == "1141"){
+      Y2016_1141
+    }
+  })
+    #From here on we Integrate the line Diagramms
+
+    output$plot2 <- renderPlotly({
+    
+    if(input$slider1 == 2008 & input$Komponente == "K4"){
+      Y2008_K4_
+    }
+    else if(input$slider1 == 2008 & input$Komponente == "K5"){
+      Y2008_K5_
+    }
+    else if(input$slider1 == 2008 & input$Komponente == "K6"){
+      Y2008_K6_
+    }
+    else if(input$slider1 == 2008 & input$Komponente == "K7"){
+      Y2008_K7_
+    }
+    else if(input$slider1 == 2008 & input$Komponente == "K3SG1"){
+      Y2008_K3SG1_
+    }
+    else if(input$slider1 == 2008 & input$Komponente == "K3SG2"){
+      Y2008_K3SG2_
+    }
+    else if(input$slider1 == 2008 & input$Komponente == "K3AG1"){
+      Y2008_K3AG1_
+    }
+    else if(input$slider1 == 2008 & input$Komponente == "K3AG2"){
+      Y2008_K3AG2_
+    }
+    else if(input$slider1 == 2008 & input$Komponente == "K2ST1"){
+      Y2008_K2ST1_
+    }
+    else if(input$slider1 == 2008 & input$Komponente == "K2ST2"){
+      Y2008_K2ST2_
+    }
+    else if(input$slider1 == 2008 & input$Komponente == "K2LE2"){
+      Y2008_K2LE2_
+    }
+    else if(input$slider1 == 2008 & input$Komponente == "K2LE1"){
+      Y2008_K2LE1_
+    }
+    else if(input$slider1 == 2008 & input$Komponente == "K1DI2"){
+      Y2008_K1DI2_
+    }
+    else if(input$slider1 == 2008 & input$Komponente == "K1DI1"){
+      Y2008_K1DI1_
+    }
+    else if(input$slider1 == 2008 & input$Komponente == "K1BE1"){
+      Y2008_K1BE1_
+    }
+    else if(input$slider1 == 2008 & input$Komponente == "K1BE2"){
+      Y2008_K1BE2_
+    }
+    else if(input$slider1 == 2009 & input$Komponente == "K4"){
+      Y2009_K4_
+    }
+    else if(input$slider1 == 2009 & input$Komponente == "K5"){
+      Y2009_K5_
+    }
+    else if(input$slider1 == 2009 & input$Komponente == "K6"){
+      Y2009_K6_
+    }
+    else if(input$slider1 == 2009 & input$Komponente == "K7"){
+      Y2009_K7_
+    }
+    else if(input$slider1 == 2009 & input$Komponente == "K3SG2"){
+      Y2009_K3SG2_
+    }
+      else if(input$slider1 == 2009 & input$Komponente == "K3SG1"){
+      Y2009_K3SG1_
+    }
+    else if(input$slider1 == 2009 & input$Komponente == "K3AG1"){
+      Y2009_K3AG1_
+    }
+    else if(input$slider1 == 2009 & input$Komponente == "K3AG2"){
+      Y2009_K3AG2_
+    }
+    else if(input$slider1 == 2009 & input$Komponente == "K2ST1"){
+      Y2009_K2ST1_
+    }
+    else if(input$slider1 == 2009 & input$Komponente == "K2ST2"){
+      Y2009_K2ST2_
+    }
+    else if(input$slider1 == 2009 & input$Komponente == "K2LE2"){
+      Y2009_K2LE2_
+    }
+    else if(input$slider1 == 2009 & input$Komponente == "K2LE1"){
+      Y2009_K2LE1_
+    }
+    else if(input$slider1 == 2009 & input$Komponente == "K1DI2"){
+      Y2009_K1DI2_
+    }
+    else if(input$slider1 == 2009 & input$Komponente == "K1DI1"){
+      Y2009_K1DI1_
+    }
+    else if(input$slider1 == 2009 & input$Komponente == "K1BE1"){
+      Y2009_K1BE1_
+    }
+    else if(input$slider1 == 2009 & input$Komponente == "K1BE2"){
+      Y2009_K1BE2_
+    }
+     else if(input$slider1 == 2010 & input$Komponente == "K4"){
+      Y2010_K4_
+    }
+    else if(input$slider1 == 2010 & input$Komponente == "K5"){
+      Y2010_K5_
+    }
+    else if(input$slider1 == 2010 & input$Komponente == "K6"){
+      Y2010_K6_
+    }
+    else if(input$slider1 == 2010 & input$Komponente == "K7"){
+      Y2010_K7_
+    }
+    else if(input$slider1 == 2010 & input$Komponente == "K3SG2"){
+      Y2010_K3SG2_
+    }
+      else if(input$slider1 == 2010 & input$Komponente == "K3SG1"){
+      Y2010_K3SG1_
+    }
+    else if(input$slider1 == 2010 & input$Komponente == "K3AG1"){
+      Y2010_K3AG1_
+    }
+    else if(input$slider1 == 2010 & input$Komponente == "K3AG2"){
+      Y2010_K3AG2_
+    }
+    else if(input$slider1 == 2010 & input$Komponente == "K2ST1"){
+      Y2010_K2ST1_
+    }
+    else if(input$slider1 == 2010 & input$Komponente == "K2ST2"){
+      Y2010_K2ST2_
+    }
+    else if(input$slider1 == 2010 & input$Komponente == "K2LE2"){
+      Y2010_K2LE2_
+    }
+    else if(input$slider1 == 2010 & input$Komponente == "K2LE1"){
+      Y2010_K2LE1_
+    }
+    else if(input$slider1 == 2010 & input$Komponente == "K1DI2"){
+      Y2010_K1DI2_
+    }
+    else if(input$slider1 == 2010 & input$Komponente == "K1DI1"){
+      Y2010_K1DI1_
+    }
+    else if(input$slider1 == 2010 & input$Komponente == "K1BE1"){
+      Y2010_K1BE1_
+    }
+    else if(input$slider1 == 2010 & input$Komponente == "K1BE2"){
+      Y2010_K1BE2_
+    }
+      else if(input$slider1 == 2011 & input$Komponente == "K4"){
+      Y2011_K4_
+    }
+    else if(input$slider1 == 2011 & input$Komponente == "K5"){
+      Y2011_K5_
+    }
+    else if(input$slider1 == 2011 & input$Komponente == "K6"){
+      Y2011_K6_
+    }
+    else if(input$slider1 == 2011 & input$Komponente == "K7"){
+      Y2011_K7_
+    }
+    else if(input$slider1 == 2011 & input$Komponente == "K3SG2"){
+      Y2011_K3SG2_
+    }
+      else if(input$slider1 == 2011 & input$Komponente == "K3SG1"){
+      Y2011_K3SG1_
+    }
+    else if(input$slider1 == 2011 & input$Komponente == "K3AG1"){
+      Y2011_K3AG1_
+    }
+    else if(input$slider1 == 2011 & input$Komponente == "K3AG2"){
+      Y2011_K3AG2_
+    }
+    else if(input$slider1 == 2011 & input$Komponente == "K2ST1"){
+      Y2011_K2ST1_
+    }
+    else if(input$slider1 == 2011 & input$Komponente == "K2ST2"){
+      Y2011_K2ST2_
+    }
+    else if(input$slider1 == 2011 & input$Komponente == "K2LE2"){
+      Y2011_K2LE2_
+    }
+    else if(input$slider1 == 2011 & input$Komponente == "K2LE1"){
+      Y2011_K2LE1_
+    }
+    else if(input$slider1 == 2011 & input$Komponente == "K1DI2"){
+      Y2011_K1DI2_
+    }
+    else if(input$slider1 == 2011 & input$Komponente == "K1DI1"){
+      Y2011_K1DI1_
+    }
+    else if(input$slider1 == 2011 & input$Komponente == "K1BE1"){
+      Y2011_K1BE1_
+    }
+    else if(input$slider1 == 2011 & input$Komponente == "K1BE2"){
+      Y2011_K1BE2_
+    }
+      else if(input$slider1 == 2012 & input$Komponente == "K4"){
+      Y2012_K4_
+    }
+    else if(input$slider1 == 2012 & input$Komponente == "K5"){
+      Y2012_K5_
+    }
+    else if(input$slider1 == 2012 & input$Komponente == "K6"){
+      Y2012_K6_
+    }
+    else if(input$slider1 == 2012 & input$Komponente == "K7"){
+      Y2012_K7_
+    }
+    else if(input$slider1 == 2012 & input$Komponente == "K3SG2"){
+      Y2012_K3SG2_
+    }
+      else if(input$slider1 == 2012 & input$Komponente == "K3SG1"){
+      Y2012_K3SG1_
+    }
+    else if(input$slider1 == 2012 & input$Komponente == "K3AG1"){
+      Y2012_K3AG1_
+    }
+    else if(input$slider1 == 2012 & input$Komponente == "K3AG2"){
+      Y2012_K3AG2_
+    }
+    else if(input$slider1 == 2012 & input$Komponente == "K2ST1"){
+      Y2012_K2ST1_
+    }
+    else if(input$slider1 == 2012 & input$Komponente == "K2ST2"){
+      Y2012_K2ST2_
+    }
+    else if(input$slider1 == 2012 & input$Komponente == "K2LE2"){
+      Y2012_K2LE2_
+    }
+    else if(input$slider1 == 2012 & input$Komponente == "K2LE1"){
+      Y2012_K2LE1_
+    }
+    else if(input$slider1 == 2012 & input$Komponente == "K1DI2"){
+      Y2012_K1DI2_
+    }
+    else if(input$slider1 == 2012 & input$Komponente == "K1DI1"){
+      Y2012_K1DI1_
+    }
+    else if(input$slider1 == 2012 & input$Komponente == "K1BE1"){
+      Y2012_K1BE1_
+    }
+    else if(input$slider1 == 2012 & input$Komponente == "K1BE2"){
+      Y2012_K1BE2_
+    }
+      else if(input$slider1 == 2013 & input$Komponente == "K4"){
+      Y2013_K4_
+    }
+    else if(input$slider1 == 2013 & input$Komponente == "K5"){
+      Y2013_K5_
+    }
+    else if(input$slider1 == 2013 & input$Komponente == "K6"){
+      Y2013_K6_
+    }
+    else if(input$slider1 == 2013 & input$Komponente == "K7"){
+      Y2013_K7_
+    }
+    else if(input$slider1 == 2013 & input$Komponente == "K3SG2"){
+      Y2013_K3SG2_
+    }
+      else if(input$slider1 == 2013 & input$Komponente == "K3SG1"){
+      Y2013_K3SG1_
+    }
+    else if(input$slider1 == 2013 & input$Komponente == "K3AG1"){
+      Y2013_K3AG1_
+    }
+    else if(input$slider1 == 2013 & input$Komponente == "K3AG2"){
+      Y2013_K3AG2_
+    }
+    else if(input$slider1 == 2013 & input$Komponente == "K2ST1"){
+      Y2013_K2ST1_
+    }
+    else if(input$slider1 == 2013 & input$Komponente == "K2ST2"){
+      Y2013_K2ST2_
+    }
+    else if(input$slider1 == 2013 & input$Komponente == "K2LE2"){
+      Y2013_K2LE2_
+    }
+    else if(input$slider1 == 2013 & input$Komponente == "K2LE1"){
+      Y2013_K2LE1_
+    }
+    else if(input$slider1 == 2013 & input$Komponente == "K1DI2"){
+      Y2013_K1DI2_
+    }
+    else if(input$slider1 == 2013 & input$Komponente == "K1DI1"){
+      Y2013_K1DI1_
+    }
+    else if(input$slider1 == 2013 & input$Komponente == "K1BE1"){
+      Y2013_K1BE1_
+    }
+    else if(input$slider1 == 2013 & input$Komponente == "K1BE2"){
+      Y2013_K1BE2_
+    }
+      else if(input$slider1 == 2014 & input$Komponente == "K4"){
+      Y2014_K4_
+    }
+    else if(input$slider1 == 2014 & input$Komponente == "K5"){
+      Y2014_K5_
+    }
+    else if(input$slider1 == 2014 & input$Komponente == "K6"){
+      Y2014_K6_
+    }
+    else if(input$slider1 == 2014 & input$Komponente == "K7"){
+      Y2014_K7_
+    }
+    else if(input$slider1 == 2014 & input$Komponente == "K3SG2"){
+      Y2014_K3SG2_
+    }
+      else if(input$slider1 == 2014 & input$Komponente == "K3SG1"){
+      Y2014_K3SG1_
+    }
+    else if(input$slider1 == 2014 & input$Komponente == "K3AG1"){
+      Y2014_K3AG1_
+    }
+    else if(input$slider1 == 2014 & input$Komponente == "K3AG2"){
+      Y2014_K3AG2_
+    }
+    else if(input$slider1 == 2014 & input$Komponente == "K2ST1"){
+      Y2014_K2ST1_
+    }
+    else if(input$slider1 == 2014 & input$Komponente == "K2ST2"){
+      Y2014_K2ST2_
+    }
+    else if(input$slider1 == 2014 & input$Komponente == "K2LE2"){
+      Y2014_K2LE2_
+    }
+    else if(input$slider1 == 2014 & input$Komponente == "K2LE1"){
+      Y2014_K2LE1_
+    }
+    else if(input$slider1 == 2014 & input$Komponente == "K1DI2"){
+      Y2014_K1DI2_
+    }
+    else if(input$slider1 == 2014 & input$Komponente == "K1DI1"){
+      Y2014_K1DI1_
+    }
+    else if(input$slider1 == 2014 & input$Komponente == "K1BE1"){
+      Y2014_K1BE1_
+    }
+    else if(input$slider1 == 2014 & input$Komponente == "K1BE2"){
+      Y2014_K1BE2_
+    }
+      else if(input$slider1 == 2015 & input$Komponente == "K4"){
+      Y2015_K4_
+    }
+    else if(input$slider1 == 2015 & input$Komponente == "K5"){
+      Y2015_K5_
+    }
+    else if(input$slider1 == 2015 & input$Komponente == "K6"){
+      Y2015_K6_
+    }
+    else if(input$slider1 == 2015 & input$Komponente == "K7"){
+      Y2015_K7_
+    }
+    else if(input$slider1 == 2015 & input$Komponente == "K3SG2"){
+      Y2015_K3SG2_
+    }
+      else if(input$slider1 == 2015 & input$Komponente == "K3SG1"){
+      Y2015_K3SG1_
+    }
+    else if(input$slider1 == 2015 & input$Komponente == "K3AG1"){
+      Y2015_K3AG1_
+    }
+    else if(input$slider1 == 2015 & input$Komponente == "K3AG2"){
+      Y2015_K3AG2_
+    }
+    else if(input$slider1 == 2015 & input$Komponente == "K2ST1"){
+      Y2015_K2ST1_
+    }
+    else if(input$slider1 == 2015 & input$Komponente == "K2ST2"){
+      Y2015_K2ST2_
+    }
+    else if(input$slider1 == 2015 & input$Komponente == "K2LE2"){
+      Y2015_K2LE2_
+    }
+    else if(input$slider1 == 2015 & input$Komponente == "K2LE1"){
+      Y2015_K2LE1_
+    }
+    else if(input$slider1 == 2015 & input$Komponente == "K1DI2"){
+      Y2015_K1DI2_
+    }
+    else if(input$slider1 == 2015 & input$Komponente == "K1DI1"){
+      Y2015_K1DI1_
+    }
+    else if(input$slider1 == 2015 & input$Komponente == "K1BE1"){
+      Y2015_K1BE1_
+    }
+    else if(input$slider1 == 2015 & input$Komponente == "K1BE2"){
+      Y2015_K1BE2_
+    }
+      else if(input$slider1 == 2016 & input$Komponente == "K4"){
+      Y2016_K4_
+    }
+    else if(input$slider1 == 2016 & input$Komponente == "K5"){
+      Y2016_K5_
+    }
+    else if(input$slider1 == 2016 & input$Komponente == "K6"){
+      Y2016_K6_
+    }
+    else if(input$slider1 == 2016 & input$Komponente == "K7"){
+      Y2016_K7_
+    }
+    else if(input$slider1 == 2016 & input$Komponente == "K3SG2"){
+      Y2016_K3SG2_
+    }
+      else if(input$slider1 == 2016 & input$Komponente == "K3SG1"){
+      Y2016_K3SG1_
+    }
+    else if(input$slider1 == 2016 & input$Komponente == "K3AG1"){
+      Y2016_K3AG1_
+    }
+    else if(input$slider1 == 2016 & input$Komponente == "K3AG2"){
+      Y2016_K3AG2_
+    }
+    else if(input$slider1 == 2016 & input$Komponente == "K2ST1"){
+      Y2016_K2ST1_
+    }
+    else if(input$slider1 == 2016 & input$Komponente == "K2ST2"){
+      Y2016_K2ST2_
+    }
+    else if(input$slider1 == 2016 & input$Komponente == "K2LE2"){
+      Y2016_K2LE2_
+    }
+    else if(input$slider1 == 2016 & input$Komponente == "K2LE1"){
+      Y2016_K2LE1_
+    }
+    else if(input$slider1 == 2016 & input$Komponente == "K1DI2"){
+      Y2016_K1DI2_
+    }
+    else if(input$slider1 == 2016 & input$Komponente == "K1DI1"){
+      Y2016_K1DI1_
+    }
+    else if(input$slider1 == 2016 & input$Komponente == "K1BE1"){
+      Y2016_K1BE1_
+    }
+    else if(input$slider1 == 2016 & input$Komponente == "K1BE2"){
+      Y2016_K1BE2_
+    }
+      
+      
+    
+   })
+  
+}
+
+shinyApp(ui, server,options =  list(height = 1080,width=1080))
+
+```
